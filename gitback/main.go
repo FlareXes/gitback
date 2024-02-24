@@ -17,15 +17,19 @@ func LogResponse(resp *github.Response) {
 	fmt.Println("Rate: ", resp.Rate)
 }
 
-func AuthenticateClientWithPAT() *github.Client {
+func GetGitHubPAT() string {
 	err := godotenv.Load()
 
 	if err != nil {
 		fmt.Println("error:", err)
 	}
 
-	token := os.Getenv("GITHUB_PERSONAL_ACCESS_TOKEN")
-	client := github.NewClient(nil).WithAuthToken(token)
+	return os.Getenv("GITHUB_PERSONAL_ACCESS_TOKEN")
+}
+
+func AuthenticateClientWithPAT() *github.Client {
+	pat := GetGitHubPAT()
+	client := github.NewClient(nil).WithAuthToken(pat)
 
 	return client
 }
@@ -61,11 +65,22 @@ func ListPrivateRepos() ([]*github.Repository, *github.Response) {
 	return repos, resp
 }
 
+func CloneRepo() {
+
+}
+
+func GetPatUrl(fullname string) string {
+	pat := GetGitHubPAT()
+	url := fmt.Sprintf("git clone https://%s@github.com/%s.git", pat, fullname)
+
+	return url
+}
+
 func main() {
 	repos, resp := ListPublicRepos("flarexes")
 
 	for i, repo := range repos {
-		fmt.Println(i, *repo.HTMLURL)
+		fmt.Println(i, GetPatUrl(*repo.FullName))
 	}
 
 	LogResponse(resp)
