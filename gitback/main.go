@@ -1,7 +1,17 @@
+/*
+GitBack provides functionality to backup GitHub repositories either
+using a GitHub Personal Access Token (PAT) or without authentication (public only).
+
+Author: FlareXes
+License:  BSD-3-Clause
+Original project link: https://github.com/flarexes/gitback/
+*/
+
 package main
 
 import (
 	"context"
+	"flag"
 	"fmt"
 	"log"
 	"os"
@@ -10,6 +20,8 @@ import (
 	"github.com/google/go-github/v59/github"
 	"github.com/joho/godotenv"
 )
+
+const backupDir = "github-repositories-backup/"
 
 func LogResponse(resp *github.Response) {
 	if !resp.TokenExpiration.IsZero() {
@@ -23,10 +35,16 @@ func GetGitHubPAT() string {
 	err := godotenv.Load()
 
 	if err != nil {
-		fmt.Println("error:", err)
+		log.Println("error:", err)
 	}
 
-	return os.Getenv("GITHUB_PERSONAL_ACCESS_TOKEN")
+	pat := os.Getenv("GITHUB_PERSONAL_ACCESS_TOKEN")
+
+	if pat == "" {
+		log.Fatal("GITHUB_PERSONAL_ACCESS_TOKEN environment variable does not exist")
+	}
+
+	return pat
 }
 
 func AuthenticateClientWithPAT() *github.Client {
@@ -77,6 +95,20 @@ func CloneRepo(url string, outputDir string) {
 	}
 }
 
+func CloneRepositories(repos []*github.Repository, noauth bool) {
+	for _, repo := range repos {
+		outputDir := backupDir + *repo.Name
+		url := *repo.CloneURL
+
+		if !noauth {
+			url = GetPatUrl(*repo.FullName)
+		}
+
+		log.Println("Cloning", *repo.CloneURL)
+		CloneRepo(url, outputDir)
+	}
+}
+
 func GetPatUrl(fullname string) string {
 	pat := GetGitHubPAT()
 	url := fmt.Sprintf("git clone https://%s@github.com/%s.git", pat, fullname)
@@ -85,16 +117,24 @@ func GetPatUrl(fullname string) string {
 }
 
 func main() {
-	os.Mkdir("github-repositories-backup", os.ModePerm)
-	repos, resp := ListPublicRepos("flarexes")
+	os.Mkdir(backupDir, os.ModePerm)
+	noauth := flag.Bool("noauth", false, "Disable GitHub Auth, Limited to 60 Request/Hr & Public Data")
+	username := flag.String("username", "", "Required When --noauth is Set")
+	flag.Parse()
 
-	for _, repo := range repos {
-		log.Println("Cloning", *repo.CloneURL)
-		outputDir := "github-repositories-backup/" + *repo.Name
-
-		// CloneRepo(GetPatUrl(*repo.FullName), outputDir)
-		CloneRepo(*repo.CloneURL, outputDir)
+	if *noauth && *username == "" {
+		log.Fatal("error: when --noauth is set, --username is required.")
 	}
 
+	var repos []*github.Repository
+	var resp *github.Response
+
+	if *noauth {
+		repos, resp = ListPublicRepos("flarexes")
+	} else {
+		repos, resp = ListPrivateRepos()
+	}
+
+	CloneRepositories(repos, *noauth)
 	LogResponse(resp)
 }
