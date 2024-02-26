@@ -130,7 +130,7 @@ func main() {
 	var resp *github.Response
 
 	if *noauth {
-		repos, resp = ListPublicRepos(username)
+		repos, resp = ListPublicRepos(*username)
 	} else {
 		repos, resp = ListPrivateRepos()
 	}
