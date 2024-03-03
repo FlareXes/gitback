@@ -94,7 +94,7 @@ func CloneRepo(url string, logURL string, outputDir string, wg *sync.WaitGroup, 
 	limiter <- 1
 
 	log.Println("Cloning", logURL)
-	cmd := exec.Command("git", "clone", "--depth", "2147483647", url, outputDir)
+	cmd := exec.Command("git", "clone", url, outputDir)
 	output, err := cmd.CombinedOutput()
 
 	if err != nil {
@@ -124,7 +124,7 @@ func CloneRepositories(repos []*github.Repository, noauth bool) {
 
 func GetPatUrl(fullname string) string {
 	pat := GetGitHubPAT()
-	url := fmt.Sprintf("git clone https://%s@github.com/%s.git", pat, fullname)
+	url := fmt.Sprintf("https://%s@github.com/%s.git", pat, fullname)
 
 	return url
 }
