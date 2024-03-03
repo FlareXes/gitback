@@ -16,12 +16,15 @@ import (
 	"log"
 	"os"
 	"os/exec"
+	"sync"
 
 	"github.com/google/go-github/v59/github"
 	"github.com/joho/godotenv"
 )
 
 const backupDir = "github-repositories-backup/"
+
+var maxConcurrentConnections int
 
 func LogResponse(resp *github.Response) {
 	if !resp.TokenExpiration.IsZero() {
@@ -85,17 +88,25 @@ func ListPrivateRepos() ([]*github.Repository, *github.Response) {
 	return repos, resp
 }
 
-func CloneRepo(url string, outputDir string) {
-	cmd := exec.Command("git", "clone", url, outputDir)
+func CloneRepo(url string, logURL string, outputDir string, wg *sync.WaitGroup, limiter chan int) {
+	defer wg.Done()
+	defer func() { <-limiter }()
+	limiter <- 1
+
+	log.Println("Cloning", logURL)
+	cmd := exec.Command("git", "clone", "--depth", "2147483647", url, outputDir)
 	output, err := cmd.CombinedOutput()
 
 	if err != nil {
-		fmt.Println("Error cloning repository:", err)
-		fmt.Println(output)
+		fmt.Println("Error cloning repository:", url, err.Error())
+		fmt.Println("Command output:", string(output))
 	}
 }
 
 func CloneRepositories(repos []*github.Repository, noauth bool) {
+	var wg sync.WaitGroup
+	limiter := make(chan int, maxConcurrentConnections)
+
 	for _, repo := range repos {
 		outputDir := backupDir + *repo.Name
 		url := *repo.CloneURL
@@ -104,9 +115,11 @@ func CloneRepositories(repos []*github.Repository, noauth bool) {
 			url = GetPatUrl(*repo.FullName)
 		}
 
-		log.Println("Cloning", *repo.CloneURL)
-		CloneRepo(url, outputDir)
+		wg.Add(1)
+		go CloneRepo(url, *repo.CloneURL, outputDir, &wg, limiter)
 	}
+
+	wg.Wait()
 }
 
 func GetPatUrl(fullname string) string {
@@ -120,6 +133,8 @@ func main() {
 	os.Mkdir(backupDir, os.ModePerm)
 	noauth := flag.Bool("noauth", false, "Disable GitHub Auth, Limited to 60 Request/Hr & Public Data")
 	username := flag.String("username", "", "Required When --noauth is Set")
+	threads := flag.Int("threads", 10, "Maximum number of concurrent connections")
+
 	flag.Parse()
 
 	if *noauth && *username == "" {
@@ -128,6 +143,7 @@ func main() {
 
 	var repos []*github.Repository
 	var resp *github.Response
+	maxConcurrentConnections = *threads
 
 	if *noauth {
 		repos, resp = ListPublicRepos(*username)
