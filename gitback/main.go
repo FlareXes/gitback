@@ -19,7 +19,6 @@ import (
 	"sync"
 
 	"github.com/google/go-github/v59/github"
-	"github.com/joho/godotenv"
 )
 
 const backupDir = "github-repositories-backup/"
@@ -35,12 +34,6 @@ func LogResponse(resp *github.Response) {
 }
 
 func GetGitHubPAT() string {
-	err := godotenv.Load()
-
-	if err != nil {
-		log.Println("error:", err)
-	}
-
 	pat := os.Getenv("GITHUB_PERSONAL_ACCESS_TOKEN")
 
 	if pat == "" {
@@ -130,7 +123,6 @@ func GetPatUrl(fullname string) string {
 }
 
 func main() {
-	os.Mkdir(backupDir, os.ModePerm)
 	noauth := flag.Bool("noauth", false, "Disable GitHub Auth, Limited to 60 Request/Hr & Public Data")
 	username := flag.String("username", "", "Required When --noauth is Set")
 	threads := flag.Int("threads", 10, "Maximum number of concurrent connections")
@@ -140,6 +132,8 @@ func main() {
 	if *noauth && *username == "" {
 		log.Fatal("error: when --noauth is set, --username is required.")
 	}
+
+	os.Mkdir(backupDir, os.ModePerm)
 
 	var repos []*github.Repository
 	var resp *github.Response
