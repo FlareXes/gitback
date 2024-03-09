@@ -5,7 +5,6 @@ GitBack is a tool designed to backup GitHub repositories either with or without 
 ## Dependencies
 
 - [github.com/google/go-github/v59/github](https://pkg.go.dev/github.com/google/go-github/v59/github)
-- [github.com/joho/godotenv](https://pkg.go.dev/github.com/joho/godotenv)
 
 ## Installation
 
@@ -18,7 +17,7 @@ git clone https://github.com/flarexes/gitback.git
 2. Navigate to the cloned directory:
 
 ```bash
-cd gitback/gitback
+cd gitback
 ```
 
 3. Build the project:
@@ -29,13 +28,11 @@ go build
 
 4. Set up a GitHub Personal Access Token (PAT) if you plan to backup private repositories. Instructions can be found [here](https://docs.github.com/en/authentication/keeping-your-account-and-data-secure/creating-a-personal-access-token).
 
-5. Create a `.env` file in the root directory of the project and add your GitHub Personal Access Token:
+5. Add your GitHub Personal Access Token as environment variable:
 
     ```
     GITHUB_PERSONAL_ACCESS_TOKEN=your_token_here
     ```
-
-    Alternatively, you can set the environment variable directly on your system:
 
     - **Windows:**
 
