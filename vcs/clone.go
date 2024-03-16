@@ -3,7 +3,8 @@ package vcs
 import (
 	"fmt"
 	"log"
-	"os"
+	// "net/url"
+	// "os"
 	"os/exec"
 	"sync"
 
@@ -50,21 +51,30 @@ func CloneRepositories(repos []*github.Repository, noauth bool) {
 }
 
 func Run(noauth bool, username string, threads int) {
-	var repos []*github.Repository
-	var resp *github.Response
+	// var repos []*github.Repository
+	// var resp *github.Response
 
-	if noauth {
-		repos, resp = gh.ListPublicRepos(username)
-	} else {
-		repos, resp = gh.ListPrivateRepos()
-	}
+	// if noauth {
+	// 	repos, resp = gh.ListPublicRepos(username)
+	// } else {
+	// 	repos, resp = gh.ListPrivateRepos()
+	// }
 
-	maxConcurrentConnections = threads
-	os.Mkdir(backupDir, os.ModePerm)
+	gh.ListPrivateRepos() // Chamge
 
-	gh.LogResponse(resp)
+	// for _, repo := range repos {
+	// 	// outputDir := backupDir + *repo.Name
+	// 	url := *repo.CloneURL
+		
+	// 	fmt.Println(url)
+	// }
 
-	CloneRepositories(repos, noauth)
+	// maxConcurrentConnections = threads
+	// os.Mkdir(backupDir, os.ModePerm)
 
-	gh.LogResponse(resp)
+	// gh.LogResponse(resp)
+
+	// CloneRepositories(repos, noauth)
+
+	// gh.LogResponse(resp)
 }
