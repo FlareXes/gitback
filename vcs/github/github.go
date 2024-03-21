@@ -9,35 +9,63 @@ import (
 	"github.com/google/go-github/v59/github"
 )
 
-func ListPublicRepos(username string) ([]*github.Repository, *github.Response) {
+func ListPublicRepos(username string) []*github.Repository {
+	var allRepos []*github.Repository
+
 	ctx := context.Background()
 	client := github.NewClient(nil)
-
-	repos, resp, err := client.Repositories.ListByUser(ctx, username, nil)
-
-	if err != nil {
-		fmt.Printf("Error listing repositories: %v\n", err)
-		os.Exit(1)
+	opt := &github.RepositoryListByUserOptions{
+		ListOptions: github.ListOptions{PerPage: 100},
 	}
 
-	return repos, resp
+	for {
+		repos, resp, err := client.Repositories.ListByUser(ctx, username, opt)
+
+		if err != nil {
+			fmt.Printf("Error listing repositories: %v\n", err)
+			os.Exit(1)
+		}
+
+		allRepos = append(allRepos, repos...)
+
+		if resp.NextPage == 0 {
+			break
+		}
+
+		opt.Page = resp.NextPage
+	}
+
+	return allRepos
 }
 
-func ListPrivateRepos() ([]*github.Repository, *github.Response) {
+func ListPrivateRepos() []*github.Repository {
+	var allRepos []*github.Repository
+
 	ctx := context.Background()
-	opt := &github.RepositoryListByAuthenticatedUserOptions{
-		Visibility: "all",
-	}
-
 	client := AuthenticateClientWithPAT()
-	repos, resp, err := client.Repositories.ListByAuthenticatedUser(ctx, opt)
-
-	if err != nil {
-		fmt.Printf("Error listing repositories: %v\n", err)
-		os.Exit(1)
+	opt := &github.RepositoryListByAuthenticatedUserOptions{
+		Visibility:  "all",
+		ListOptions: github.ListOptions{PerPage: 100},
 	}
 
-	return repos, resp
+	for {
+		repos, resp, err := client.Repositories.ListByAuthenticatedUser(ctx, opt)
+
+		if err != nil {
+			fmt.Printf("Error listing repositories: %v\n", err)
+			os.Exit(1)
+		}
+
+		allRepos = append(allRepos, repos...)
+
+		if resp.NextPage == 0 {
+			break
+		}
+
+		opt.Page = resp.NextPage
+	}
+
+	return allRepos
 }
 
 func AuthenticateClientWithPAT() *github.Client {
