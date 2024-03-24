@@ -9,8 +9,9 @@ import (
 	"github.com/google/go-github/v59/github"
 )
 
-func ListPublicRepos(username string) []*github.Repository {
+func ListPublicRepos(username string) ([]*github.Repository, *github.Response) {
 	var allRepos []*github.Repository
+	var rateInfo *github.Response
 
 	ctx := context.Background()
 	client := github.NewClient(nil)
@@ -26,7 +27,7 @@ func ListPublicRepos(username string) []*github.Repository {
 			os.Exit(1)
 		}
 
-		allRepos = append(allRepos, repos...)
+		allRepos, rateInfo = append(allRepos, repos...), resp
 
 		if resp.NextPage == 0 {
 			break
@@ -35,11 +36,12 @@ func ListPublicRepos(username string) []*github.Repository {
 		opt.Page = resp.NextPage
 	}
 
-	return allRepos
+	return allRepos, rateInfo
 }
 
-func ListPrivateRepos() []*github.Repository {
+func ListPrivateRepos() ([]*github.Repository, *github.Response) {
 	var allRepos []*github.Repository
+	var rateInfo *github.Response
 
 	ctx := context.Background()
 	client := AuthenticateClientWithPAT()
@@ -56,7 +58,7 @@ func ListPrivateRepos() []*github.Repository {
 			os.Exit(1)
 		}
 
-		allRepos = append(allRepos, repos...)
+		allRepos, rateInfo = append(allRepos, repos...), resp
 
 		if resp.NextPage == 0 {
 			break
@@ -65,7 +67,7 @@ func ListPrivateRepos() []*github.Repository {
 		opt.Page = resp.NextPage
 	}
 
-	return allRepos
+	return allRepos, rateInfo
 }
 
 func AuthenticateClientWithPAT() *github.Client {
@@ -92,10 +94,10 @@ func GetGitHubPAT() string {
 	return pat
 }
 
-func LogResponse(resp *github.Response) {
-	if !resp.TokenExpiration.IsZero() {
-		fmt.Println("Token Expiration:", resp.TokenExpiration)
+func LogResponse(rateInfo *github.Response) {
+	if !rateInfo.TokenExpiration.IsZero() {
+		fmt.Println("Token Expiration:", rateInfo.TokenExpiration)
 	}
 
-	fmt.Println("Rate:", resp.Rate)
+	fmt.Println("Rate:", rateInfo.Rate)
 }

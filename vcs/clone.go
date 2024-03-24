@@ -51,20 +51,20 @@ func CloneRepositories(repos []*github.Repository, noauth bool) {
 
 func Run(noauth bool, username string, threads int) {
 	var repos []*github.Repository
-	// var resp *github.Response
+	var rateInfo *github.Response
 
 	if noauth {
-		repos = gh.ListPublicRepos(username)
+		repos, rateInfo = gh.ListPublicRepos(username)
 	} else {
-		repos = gh.ListPrivateRepos()
+		repos, rateInfo = gh.ListPrivateRepos()
 	}
 
 	maxConcurrentConnections = threads
 	os.Mkdir(backupDir, os.ModePerm)
 
-	// gh.LogResponse(resp)
+	gh.LogResponse(rateInfo)
 
 	CloneRepositories(repos, noauth)
 
-	// gh.LogResponse(resp)
+	gh.LogResponse(rateInfo)
 }
