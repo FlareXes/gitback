@@ -15,7 +15,7 @@ const backupDir = "github-repositories-backup/"
 
 var maxConcurrentConnections int
 
-func CloneRepo(url string, logURL string, outputDir string, wg *sync.WaitGroup, limiter chan int) {
+func cloneRepo(url string, logURL string, outputDir string, wg *sync.WaitGroup, limiter chan int) {
 	defer wg.Done()
 	defer func() { <-limiter }()
 	limiter <- 1
@@ -30,7 +30,7 @@ func CloneRepo(url string, logURL string, outputDir string, wg *sync.WaitGroup, 
 	}
 }
 
-func CloneRepositories(repos []*github.Repository, noauth bool) {
+func cloneRepositories(repos []*github.Repository, noauth bool) {
 	var wg sync.WaitGroup
 	limiter := make(chan int, maxConcurrentConnections)
 
@@ -43,7 +43,7 @@ func CloneRepositories(repos []*github.Repository, noauth bool) {
 		}
 
 		wg.Add(1)
-		go CloneRepo(url, *repo.CloneURL, outputDir, &wg, limiter)
+		go cloneRepo(url, *repo.CloneURL, outputDir, &wg, limiter)
 	}
 
 	wg.Wait()
@@ -64,7 +64,7 @@ func Run(noauth bool, username string, threads int) {
 
 	gh.LogResponse(rateInfo)
 
-	CloneRepositories(repos, noauth)
+	cloneRepositories(repos, noauth)
 
 	gh.LogResponse(rateInfo)
 }
