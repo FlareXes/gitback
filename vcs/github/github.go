@@ -101,3 +101,16 @@ func getGitHubPAT() string {
 
 	return pat
 }
+
+func ListPublicGists(username string) ([]*github.Gist, *github.Response) {
+	ctx := context.Background()
+	client := github.NewClient(nil)
+	gists, resp, err := client.Gists.List(ctx, username, nil)
+
+	if err != nil {
+		fmt.Printf("Error listing gists: %v\n", err)
+		os.Exit(1)
+	}
+
+	return gists, resp
+}
