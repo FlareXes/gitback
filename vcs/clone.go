@@ -12,10 +12,11 @@ import (
 	"github.com/google/go-github/v59/github"
 )
 
-const backupRepoDir = "github-repositories-backup/repo/"
-const backupGistDir = "github-repositories-backup/gist/"
-
 var maxConcurrentConnections int
+
+const backupRepoDir = "github-repositories-backup/repo/"
+
+// const backupGistDir = "github-repositories-backup/gist/"
 
 func cloneRepo(url string, logURL string, outputDir string, wg *sync.WaitGroup, limiter chan int) {
 	defer wg.Done()
@@ -51,41 +52,41 @@ func cloneRepositories(repos []*github.Repository, noauth bool) {
 	wg.Wait()
 }
 
-func cloneGists(gists []*github.Gist) {
-	var wg sync.WaitGroup
-	limiter := make(chan int, maxConcurrentConnections)
+// func cloneGists(gists []*github.Gist) {
+// 	var wg sync.WaitGroup
+// 	limiter := make(chan int, maxConcurrentConnections)
 
-	for _, gist := range gists {
-		outputDir := backupGistDir + *gist.ID
-		url := *gist.HTMLURL
+// 	for _, gist := range gists {
+// 		outputDir := backupGistDir + *gist.ID
+// 		url := *gist.HTMLURL
 
-		wg.Add(1)
-		go cloneRepo(url, url, outputDir, &wg, limiter)
-	}
+// 		wg.Add(1)
+// 		go cloneRepo(url, url, outputDir, &wg, limiter)
+// 	}
 
-	wg.Wait()
-}
+// 	wg.Wait()
+// }
 
 func Run(noauth bool, username string, threads int) {
 	var repos []*github.Repository
-	var gists []*github.Gist
+	// var gists []*github.Gist
 	var rateInfo *github.Response
 
 	if noauth {
 		repos, rateInfo = gh.ListPublicRepos(username)
-		gists, rateInfo = gh.ListPublicGists(username)
+		// gists, rateInfo = gh.ListPublicGists(username)
 	} else {
 		repos, rateInfo = gh.ListPrivateRepos()
-		gists, rateInfo = gh.ListPublicGists(username)
+		// gists, rateInfo = gh.ListPublicGists(username)
 	}
 
 	maxConcurrentConnections = threads
 	os.Mkdir(backupRepoDir, os.ModePerm)
-	os.Mkdir(backupGistDir, os.ModePerm)
+	// os.Mkdir(backupGistDir, os.ModePerm)
 
 	gh.LogResponse(rateInfo)
 
-	cloneGists(gists)
+	// cloneGists(gists)
 	cloneRepositories(repos, noauth)
 
 	gh.LogResponse(rateInfo)

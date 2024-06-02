@@ -9,6 +9,23 @@ import (
 	"github.com/google/go-github/v59/github"
 )
 
+func getGitHubPAT() string {
+	pat := os.Getenv("GITHUB_PERSONAL_ACCESS_TOKEN")
+
+	if pat == "" {
+		log.Fatal("GITHUB_PERSONAL_ACCESS_TOKEN environment variable does not exist")
+	}
+
+	return pat
+}
+
+func authenticateClientWithPAT() *github.Client {
+	pat := getGitHubPAT()
+	client := github.NewClient(nil).WithAuthToken(pat)
+
+	return client
+}
+
 func LogResponse(rateInfo *github.Response) {
 	if !rateInfo.TokenExpiration.IsZero() {
 		fmt.Println("Token Expiration:", rateInfo.TokenExpiration)
@@ -54,6 +71,19 @@ func ListPublicRepos(username string) ([]*github.Repository, *github.Response) {
 	return allRepos, rateInfo
 }
 
+// func ListPublicGists(username string) ([]*github.Gist, *github.Response) {
+// 	ctx := context.Background()
+// 	client := github.NewClient(nil)
+// 	gists, resp, err := client.Gists.List(ctx, username, nil)
+
+// 	if err != nil {
+// 		fmt.Printf("Error listing gists: %v\n", err)
+// 		os.Exit(1)
+// 	}
+
+// 	return gists, resp
+// }
+
 func ListPrivateRepos() ([]*github.Repository, *github.Response) {
 	var allRepos []*github.Repository
 	var rateInfo *github.Response
@@ -83,34 +113,4 @@ func ListPrivateRepos() ([]*github.Repository, *github.Response) {
 	}
 
 	return allRepos, rateInfo
-}
-
-func authenticateClientWithPAT() *github.Client {
-	pat := getGitHubPAT()
-	client := github.NewClient(nil).WithAuthToken(pat)
-
-	return client
-}
-
-func getGitHubPAT() string {
-	pat := os.Getenv("GITHUB_PERSONAL_ACCESS_TOKEN")
-
-	if pat == "" {
-		log.Fatal("GITHUB_PERSONAL_ACCESS_TOKEN environment variable does not exist")
-	}
-
-	return pat
-}
-
-func ListPublicGists(username string) ([]*github.Gist, *github.Response) {
-	ctx := context.Background()
-	client := github.NewClient(nil)
-	gists, resp, err := client.Gists.List(ctx, username, nil)
-
-	if err != nil {
-		fmt.Printf("Error listing gists: %v\n", err)
-		os.Exit(1)
-	}
-
-	return gists, resp
 }
