@@ -1,4 +1,4 @@
-package github
+package vcs
 
 import (
 	"context"
@@ -11,19 +11,17 @@ import (
 
 func getGitHubPAT() string {
 	pat := os.Getenv("GITHUB_PERSONAL_ACCESS_TOKEN")
-
 	if pat == "" {
-		log.Fatal("GITHUB_PERSONAL_ACCESS_TOKEN environment variable does not exist")
+		fmt.Println("[-] GITHUB_PERSONAL_ACCESS_TOKEN environment variable does not exist")
+		fmt.Println("Tip: use --noauth to disable auth, --username is required on auth disable")
+		os.Exit(1)
 	}
-
 	return pat
 }
 
 func authenticateClientWithPAT() *github.Client {
 	pat := getGitHubPAT()
-	client := github.NewClient(nil).WithAuthToken(pat)
-
-	return client
+	return github.NewClient(nil).WithAuthToken(pat)
 }
 
 func LogResponse(rateInfo *github.Response) {
@@ -53,36 +51,20 @@ func ListPublicRepos(username string) ([]*github.Repository, *github.Response) {
 
 	for {
 		repos, resp, err := client.Repositories.ListByUser(ctx, username, opt)
-
 		if err != nil {
 			fmt.Printf("Error listing repositories: %v\n", err)
 			os.Exit(1)
 		}
 
 		allRepos, rateInfo = append(allRepos, repos...), resp
-
 		if resp.NextPage == 0 {
 			break
 		}
 
 		opt.Page = resp.NextPage
 	}
-
 	return allRepos, rateInfo
 }
-
-// func ListPublicGists(username string) ([]*github.Gist, *github.Response) {
-// 	ctx := context.Background()
-// 	client := github.NewClient(nil)
-// 	gists, resp, err := client.Gists.List(ctx, username, nil)
-
-// 	if err != nil {
-// 		fmt.Printf("Error listing gists: %v\n", err)
-// 		os.Exit(1)
-// 	}
-
-// 	return gists, resp
-// }
 
 func ListPrivateRepos() ([]*github.Repository, *github.Response) {
 	var allRepos []*github.Repository
@@ -97,20 +79,17 @@ func ListPrivateRepos() ([]*github.Repository, *github.Response) {
 
 	for {
 		repos, resp, err := client.Repositories.ListByAuthenticatedUser(ctx, opt)
-
 		if err != nil {
-			fmt.Printf("Error listing repositories: %v\n", err)
-			os.Exit(1)
+			LogResponse(resp)
+			log.Fatal("Error listing repositories: ", err)
 		}
 
 		allRepos, rateInfo = append(allRepos, repos...), resp
-
 		if resp.NextPage == 0 {
 			break
 		}
 
 		opt.Page = resp.NextPage
 	}
-
 	return allRepos, rateInfo
 }
