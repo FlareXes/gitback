@@ -9,6 +9,8 @@ import (
 	"github.com/google/go-github/v59/github"
 )
 
+const PER_PAGE = 100
+
 func getGitHubPAT() string {
 	pat := os.Getenv("GITHUB_PERSONAL_ACCESS_TOKEN")
 	if pat == "" {
@@ -46,15 +48,15 @@ func ListPublicRepos(username string) ([]*github.Repository, *github.Response) {
 	ctx := context.Background()
 	client := github.NewClient(nil)
 	opt := &github.RepositoryListByUserOptions{
-		ListOptions: github.ListOptions{PerPage: 100},
+		ListOptions: github.ListOptions{PerPage: PER_PAGE},
 	}
 
 	for {
 		repos, resp, err := client.Repositories.ListByUser(ctx, username, opt)
 		if err != nil {
-			fmt.Printf("Error listing repositories: %v\n", err)
-			os.Exit(1)
+			log.Fatal("Error listing repositories: ", err)
 		}
+		LogResponse(resp)
 
 		allRepos, rateInfo = append(allRepos, repos...), resp
 		if resp.NextPage == 0 {
@@ -74,15 +76,15 @@ func ListPrivateRepos() ([]*github.Repository, *github.Response) {
 	client := authenticateClientWithPAT()
 	opt := &github.RepositoryListByAuthenticatedUserOptions{
 		Visibility:  "all",
-		ListOptions: github.ListOptions{PerPage: 100},
+		ListOptions: github.ListOptions{PerPage: PER_PAGE},
 	}
 
 	for {
 		repos, resp, err := client.Repositories.ListByAuthenticatedUser(ctx, opt)
 		if err != nil {
-			LogResponse(resp)
 			log.Fatal("Error listing repositories: ", err)
 		}
+		LogResponse(resp)
 
 		allRepos, rateInfo = append(allRepos, repos...), resp
 		if resp.NextPage == 0 {
@@ -92,4 +94,31 @@ func ListPrivateRepos() ([]*github.Repository, *github.Response) {
 		opt.Page = resp.NextPage
 	}
 	return allRepos, rateInfo
+}
+
+func ListPublicGists(username string) ([]*github.Gist, *github.Response) {
+	var allGists []*github.Gist
+	var rateInfo *github.Response
+
+	ctx := context.Background()
+	client := github.NewClient(nil)
+	opt := &github.GistListOptions{
+		ListOptions: github.ListOptions{PerPage: PER_PAGE},
+	}
+
+	for {
+		gists, resp, err := client.Gists.List(ctx, username, opt)
+		if err != nil {
+			log.Fatal("Error listing gists: ", err)
+		}
+		LogResponse(resp)
+
+		allGists, rateInfo = append(allGists, gists...), resp
+		if resp.NextPage == 0 {
+			break
+		}
+
+		opt.Page = resp.NextPage
+	}
+	return allGists, rateInfo
 }
