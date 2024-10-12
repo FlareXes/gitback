@@ -47,18 +47,13 @@ func cloneRepos(repos []*github.Repository, noauth bool) {
 	wg.Wait()
 }
 
-func cloneGists(gists []*github.Gist, noauth bool) {
+func cloneGists(gists []*github.Gist) {
 	var wg sync.WaitGroup
 	limiter := make(chan int, MaxConcurrentConnections)
 
 	for _, gist := range gists {
 		outputDir := BACKUP_GISTS_DIR + *gist.ID
-		url := *gist.HTMLURL
-
-		// override url to clone privates
-		if !noauth {
-			url = GetPatUrl(*gist.ID) // TODO: In-Complete
-		}
+		url := *gist.GitPullURL
 		wg.Add(1)
 		go gitCloneExec(url, url, outputDir, &wg, limiter)
 	}
@@ -74,7 +69,8 @@ func Run(noauth bool, username string, threads int) {
 		repos, _ = ListPublicRepos(username)
 		gists, rateInfo = ListPublicGists(username)
 	} else {
-		repos, rateInfo = ListPrivateRepos()
+		repos, _ = ListPrivateRepos()
+		gists, rateInfo = ListPrivateGists()
 	}
 
 	MaxConcurrentConnections = threads
@@ -85,7 +81,7 @@ func Run(noauth bool, username string, threads int) {
 	}
 
 	if len(gists) != 0 {
-		cloneGists(gists, noauth)
+		cloneGists(gists)
 	}
 	LogResponse(rateInfo)
 }

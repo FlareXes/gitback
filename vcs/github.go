@@ -122,3 +122,30 @@ func ListPublicGists(username string) ([]*github.Gist, *github.Response) {
 	}
 	return allGists, rateInfo
 }
+
+func ListPrivateGists() ([]*github.Gist, *github.Response) {
+	var allGists []*github.Gist
+	var rateInfo *github.Response
+
+	ctx := context.Background()
+	client := authenticateClientWithPAT()
+	opt := &github.GistListOptions{
+		ListOptions: github.ListOptions{PerPage: PER_PAGE},
+	}
+
+	for {
+		gists, resp, err := client.Gists.List(ctx, "", opt)
+		if err != nil {
+			log.Fatal("Error listing gists: ", err)
+		}
+		LogResponse(resp)
+
+		allGists, rateInfo = append(allGists, gists...), resp
+		if resp.NextPage == 0 {
+			break
+		}
+
+		opt.Page = resp.NextPage
+	}
+	return allGists, rateInfo
+}
