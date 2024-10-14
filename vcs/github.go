@@ -34,11 +34,12 @@ func LogResponse(rateInfo *github.Response) {
 	fmt.Println("Rate:", rateInfo.Rate)
 }
 
-func GetPatUrl(fullname string) string {
+func GetPatUrl(fullname string) (string, string) {
 	pat := getGitHubPAT()
-	url := fmt.Sprintf("https://%s@github.com/%s.git", pat, fullname)
+	rUrl := fmt.Sprintf("https://%s@github.com/%s.git", pat, fullname)
+	wUrl := fmt.Sprintf("https://%s@github.com/%s.wiki.git", pat, fullname)
 
-	return url
+	return rUrl, wUrl
 }
 
 func ListPublicRepos(username string) ([]*github.Repository, *github.Response) {

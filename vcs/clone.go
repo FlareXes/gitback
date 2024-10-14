@@ -34,15 +34,22 @@ func cloneRepos(repos []*github.Repository, noauth bool) {
 	limiter := make(chan int, MaxConcurrentConnections)
 
 	for _, repo := range repos {
-		outputDir := BACKUP_REPOS_DIR + *repo.Name
-		url := *repo.CloneURL
+		outputRepoDir := BACKUP_REPOS_DIR + *repo.Name
+		outputWikiDir := outputRepoDir + ".wiki"
+		repoUrl := *repo.CloneURL
+		wikiUrl := "https://github.com/" + *repo.FullName + ".wiki.git"
 
-		// override url to clone privates
 		if !noauth {
-			url = GetPatUrl(*repo.FullName)
+			repoUrl, wikiUrl = GetPatUrl(*repo.FullName)
 		}
+
+		if *repo.HasWiki && *repo.HasPages {
+			wg.Add(1)
+			go gitCloneExec(wikiUrl, wikiUrl, outputWikiDir, &wg, limiter)
+		}
+
 		wg.Add(1)
-		go gitCloneExec(url, *repo.CloneURL, outputDir, &wg, limiter)
+		go gitCloneExec(repoUrl, repoUrl, outputRepoDir, &wg, limiter)
 	}
 	wg.Wait()
 }
