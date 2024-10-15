@@ -2,17 +2,18 @@ package vcs
 
 import (
 	"log"
-	"os"
 	"os/exec"
 	"sync"
+	"time"
 
 	"github.com/google/go-github/v59/github"
 )
 
-var MaxConcurrentConnections int
+var maxConcurrentConnections int
 
-const BACKUP_REPOS_DIR = "github-repositories-backup/repos/"
-const BACKUP_GISTS_DIR = "github-repositories-backup/gists/"
+var dateTime string = time.Now().Format("2006-01-02_15-04-05")
+var BACKUP_REPOS_DIR string = "gitback-backup_" + dateTime + "/repos/"
+var BACKUP_GISTS_DIR string = "gitback-backup_" + dateTime + "/gists/"
 
 func gitCloneExec(url string, logURL string, outputDir string, wg *sync.WaitGroup, limiter chan int) {
 	defer wg.Done()
@@ -31,7 +32,7 @@ func gitCloneExec(url string, logURL string, outputDir string, wg *sync.WaitGrou
 
 func cloneRepos(repos []*github.Repository, noauth bool) {
 	var wg sync.WaitGroup
-	limiter := make(chan int, MaxConcurrentConnections)
+	limiter := make(chan int, maxConcurrentConnections)
 
 	for _, repo := range repos {
 		outputRepoDir := BACKUP_REPOS_DIR + *repo.Name
@@ -56,7 +57,7 @@ func cloneRepos(repos []*github.Repository, noauth bool) {
 
 func cloneGists(gists []*github.Gist) {
 	var wg sync.WaitGroup
-	limiter := make(chan int, MaxConcurrentConnections)
+	limiter := make(chan int, maxConcurrentConnections)
 
 	for _, gist := range gists {
 		outputDir := BACKUP_GISTS_DIR + *gist.ID
@@ -71,6 +72,7 @@ func Run(noauth bool, username string, threads int) {
 	var repos []*github.Repository
 	var gists []*github.Gist
 	var rateInfo *github.Response
+	maxConcurrentConnections = threads
 
 	if noauth {
 		repos, _ = ListPublicRepos(username)
@@ -79,9 +81,6 @@ func Run(noauth bool, username string, threads int) {
 		repos, _ = ListPrivateRepos()
 		gists, rateInfo = ListPrivateGists()
 	}
-
-	MaxConcurrentConnections = threads
-	os.Mkdir(BACKUP_REPOS_DIR, os.ModePerm)
 
 	if len(repos) != 0 {
 		cloneRepos(repos, noauth)
