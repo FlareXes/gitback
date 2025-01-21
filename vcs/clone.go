@@ -44,7 +44,7 @@ func cloneRepos(repos []*github.Repository, noauth bool) {
 			repoUrl, wikiUrl = GetPatUrl(*repo.FullName)
 		}
 
-		if *repo.HasWiki && *repo.HasPages {
+		if *repo.HasWiki {
 			wg.Add(1)
 			go gitCloneExec(wikiUrl, wikiUrl, outputWikiDir, &wg, limiter)
 		}
