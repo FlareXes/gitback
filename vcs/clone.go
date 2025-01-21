@@ -2,6 +2,7 @@ package vcs
 
 import (
 	"log"
+	"net/http"
 	"os/exec"
 	"sync"
 	"time"
@@ -15,17 +16,31 @@ var dateTime string = time.Now().Format("2006-01-02_15-04-05")
 var BACKUP_REPOS_DIR string = "gitback-backup_" + dateTime + "/repos/"
 var BACKUP_GISTS_DIR string = "gitback-backup_" + dateTime + "/gists/"
 
-func gitCloneExec(url string, logURL string, outputDir string, wg *sync.WaitGroup, limiter chan int) {
+type Repo struct {
+	URL       string
+	OutputDir string
+	HasWiki   bool
+}
+
+func gitCloneExec(repo Repo, wg *sync.WaitGroup, limiter chan int) {
 	defer wg.Done()
 	defer func() { <-limiter }()
 	limiter <- 1
 
-	log.Println("Cloning", logURL)
-	cmd := exec.Command("git", "clone", url, outputDir)
+	// check if wiki truly exist
+	if repo.HasWiki {
+		resp, err := http.Head(repo.URL)
+		if err != nil || resp.StatusCode == http.StatusNotFound {
+			return
+		}
+	}
+
+	log.Println("Cloning: ", repo.URL)
+	cmd := exec.Command("git", "clone", repo.URL, repo.OutputDir)
 	output, err := cmd.CombinedOutput() // TODO: Print output
 
 	if err != nil {
-		log.Println("Error cloning repository: ", url, err.Error())
+		log.Println("Error cloning repository: ", repo.URL, err.Error())
 		log.Println("Command output: ", string(output))
 	}
 }
@@ -45,12 +60,22 @@ func cloneRepos(repos []*github.Repository, noauth bool) {
 		}
 
 		if *repo.HasWiki {
+			repoParams := Repo{
+				URL:       wikiUrl,
+				OutputDir: outputWikiDir,
+				HasWiki:   true,
+			}
 			wg.Add(1)
-			go gitCloneExec(wikiUrl, wikiUrl, outputWikiDir, &wg, limiter)
+			go gitCloneExec(repoParams, &wg, limiter)
 		}
 
+		repoParams := Repo{
+			URL:       repoUrl,
+			OutputDir: outputRepoDir,
+			HasWiki:   false,
+		}
 		wg.Add(1)
-		go gitCloneExec(repoUrl, repoUrl, outputRepoDir, &wg, limiter)
+		go gitCloneExec(repoParams, &wg, limiter)
 	}
 	wg.Wait()
 }
@@ -62,8 +87,13 @@ func cloneGists(gists []*github.Gist) {
 	for _, gist := range gists {
 		outputDir := BACKUP_GISTS_DIR + *gist.ID
 		url := *gist.GitPullURL
+		gistParams := Repo{
+			URL:       url,
+			OutputDir: outputDir,
+			HasWiki:   false,
+		}
 		wg.Add(1)
-		go gitCloneExec(url, url, outputDir, &wg, limiter)
+		go gitCloneExec(gistParams, &wg, limiter)
 	}
 	wg.Wait()
 }
