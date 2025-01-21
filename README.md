@@ -1,6 +1,13 @@
 # GitBack
 
-GitBack is a tool designed to backup GitHub repositories either with or without authentication. It provides the flexibility to backup public repositories without authentication or to backup both public and private repositories using a GitHub Personal Access Token (PAT).
+GitBack is a tool designed to backup GitHub *repositories*, *wikis*, and *gists* either with or without authentication. It provides the flexibility to backup public repositories without authentication or to backup both public and private repositories using a GitHub Personal Access Token (PAT).
+
+## Features
+
+- Backup repositories with or without authentication.
+- Clone repositories and their wikis if available.
+- Clone public and private gists (requires PAT).
+- Supports concurrent downloads for faster backups.
 
 ## Dependencies
 
@@ -26,7 +33,7 @@ cd gitback
 go build
 ```
 
-4. Set up a GitHub Personal Access Token (PAT) if you plan to backup private repositories. Instructions can be found [here](https://docs.github.com/en/authentication/keeping-your-account-and-data-secure/creating-a-personal-access-token).
+4. (Optional) Set up a GitHub Personal Access Token (PAT) if you plan to backup private repositories. Instructions can be found [here](https://docs.github.com/en/authentication/keeping-your-account-and-data-secure/creating-a-personal-access-token).
 
 5. Add your GitHub Personal Access Token as environment variable:
 
@@ -67,8 +74,19 @@ go build
 
 ### Flags
 
-- `-noauth`: Disable GitHub authentication. Limited to 60 requests per hour and only public data can be accessed.
-- `-username`: Required when `--noauth` flag is set. Specify the GitHub username to backup public repositories.
+| Flag        | Description                                                                                       | Required                  |
+| ----------- | ------------------------------------------------------------------------------------------------- | ------------------------- |
+| `-noauth`   | Disable GitHub authentication. Limits requests to 60 per hour and access to public data only.     | No                        |
+| `-username` | Specify the GitHub username when using `-noauth`.                                                 | Yes (if `-noauth` is set) |
+| `-threads`  | Set the maximum number of concurrent connections (default: 10).                                   | No                        |
+| `-token`    | Provide the GitHub Personal Access Token directly as a flag (overrides the environment variable). | No                        |
+
+### Folder Structure
+
+When running the tool, the following folders will be created:
+
+- **`gitback-backup_YYYY-MM-DD_HH-MM-SS/repos/`**: Contains cloned repositories and their wikis.
+- **`gitback-backup_YYYY-MM-DD_HH-MM-SS/gists/`**: Contains cloned gists.
 
 ## Examples
 
@@ -82,6 +100,12 @@ go build
 
 ```bash
 ./gitback
+```
+
+### Backup with Custom Thread Limit
+
+```bash
+./gitback -threads 20
 ```
 
 ## Contributing
