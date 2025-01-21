@@ -16,6 +16,7 @@ func getGitHubPAT() string {
 	if pat == "" {
 		fmt.Println("[-] GITHUB_PERSONAL_ACCESS_TOKEN environment variable does not exist")
 		fmt.Println("Tip: use --noauth to disable auth, --username is required on auth disable")
+		fmt.Println("\nUsage: gitback --noauth --username flarexes")
 		os.Exit(1)
 	}
 	return pat
