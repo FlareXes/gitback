@@ -36,7 +36,7 @@ func gitCloneExec(repo Repo, wg *sync.WaitGroup, limiter chan int) {
 	}
 
 	log.Println("Cloning: ", repo.URL)
-	cmd := exec.Command("git", "clone", repo.URL, repo.OutputDir)
+	cmd := exec.Command("git", "clone", "--config", "http.postBuffer=500m", repo.URL, repo.OutputDir)
 	output, err := cmd.CombinedOutput() // TODO: Print output
 
 	if err != nil {
@@ -98,11 +98,11 @@ func cloneGists(gists []*github.Gist) {
 	wg.Wait()
 }
 
-func Run(noauth bool, username string, threads int) {
+func Run(noauth bool, username string, thread int) {
 	var repos []*github.Repository
 	var gists []*github.Gist
 	var rateInfo *github.Response
-	maxConcurrentConnections = threads
+	maxConcurrentConnections = thread
 
 	if noauth {
 		repos, _ = ListPublicRepos(username)

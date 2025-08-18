@@ -20,7 +20,7 @@ import (
 func main() {
 	noauth := flag.Bool("noauth", false, "Disable GitHub Auth, Limited to 60 Request/Hr & Public Data")
 	username := flag.String("username", "", "Required When --noauth is Set")
-	threads := flag.Int("threads", 10, "Maximum number of concurrent connections")
+	thread := flag.Int("thread", 10, "Maximum number of concurrent connections")
 	token := flag.String("token", "", "GitHub API Token")
 
 	flag.Parse()
@@ -30,8 +30,8 @@ func main() {
 		log.Fatal("Usage: gitback --noauth --username flarexes")
 	}
 
-	if *threads <= 1 {
-		log.Fatal("Error: --threads must be a positive integer")
+	if *thread <= 1 {
+		log.Fatal("Error: --thread must be a positive integer")
 	}
 
 	if *token != "" {
@@ -40,5 +40,5 @@ func main() {
 		}
 	}
 
-	vcs.Run(*noauth, *username, *threads)
+	vcs.Run(*noauth, *username, *thread)
 }

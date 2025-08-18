@@ -78,7 +78,7 @@ go build
 | ----------- | ------------------------------------------------------------------------------------------------- | ------------------------- |
 | `-noauth`   | Disable GitHub authentication. Limits requests to 60 per hour and access to public data only.     | No                        |
 | `-username` | Specify the GitHub username when using `-noauth`.                                                 | Yes (if `-noauth` is set) |
-| `-threads`  | Set the maximum number of concurrent connections (default: 10).                                   | No                        |
+| `-thread`  | Set the maximum number of concurrent connections (default: 10).                                   | No                        |
 | `-token`    | Provide the GitHub Personal Access Token directly as a flag (overrides the environment variable). | No                        |
 
 ### Folder Structure
@@ -105,7 +105,7 @@ When running the tool, the following folders will be created:
 ### Backup with Custom Thread Limit
 
 ```bash
-./gitback -threads 20
+./gitback -thread 20
 ```
 
 ## Contributing
