@@ -1,94 +1,106 @@
 # GitBack
 
-GitBack is a tool designed to backup GitHub *repositories*, *wikis*, and *gists* either with or without authentication. It provides the flexibility to backup public repositories without authentication or to backup both public and private repositories using a GitHub Personal Access Token (PAT).
+GitBack is a production-ready tool designed to backup GitHub repositories and gists with support for both authenticated and unauthenticated access. It's built with Go and follows best practices for configuration management, error handling, and code organization.
 
 ## Features
 
-- Backup repositories with or without authentication.
-- Clone repositories and their wikis if available.
-- Clone public and private gists (requires PAT).
-- Supports concurrent downloads for faster backups.
-
-## Dependencies
-
-- [github.com/google/go-github/v59/github](https://pkg.go.dev/github.com/google/go-github/v59/github)
+- **Flexible Authentication**: Backup with or without GitHub authentication
+- **Comprehensive Backup**: Supports repositories and gists (public and private with token)
+- **Concurrent Operations**: Configurable number of concurrent operations
+- **Production Ready**: Proper error handling, logging, and configuration management
+- **Configurable**: Multiple ways to configure the tool (flags, environment variables)
+- **Rate Limiting**: Built-in rate limit handling for GitHub API
+- **Docker Support**: Easy deployment using Docker
+- **CI/CD Ready**: GitHub Actions workflow for automated testing and deployment
 
 ## Installation
 
-1. Clone the GitBack repository:
+### Prerequisites
+
+- Go 1.21 or higher (for building from source)
+- Git (for repository cloning)
+- Docker (for containerized deployment)
+
+### Building from Source
+
+1. Clone the repository:
+   ```bash
+   git clone https://github.com/flarexes/gitback.git
+   cd gitback
+   ```
+
+2. Build the binary:
+   ```bash
+   make build
+   ```
+
+3. (Optional) Install to your GOPATH:
+   ```bash
+   go install ./cmd/gitback
+   ```
+
+### Using Docker
 
 ```bash
-git clone https://github.com/flarexes/gitback.git
+# Build the Docker image
+docker build -t gitback .
+
+# Run with environment variables
+docker run --rm -e GITHUB_TOKEN=your_token -e GITBACK_USER=your_username -v $(pwd)/backups:/data gitback
 ```
 
-2. Navigate to the cloned directory:
+### Using Docker Compose
 
-```bash
-cd gitback
+1. Copy the example environment file:
+   ```bash
+   cp .env.example .env
+   ```
+2. Edit `.env` with your configuration
+3. Run with Docker Compose:
+   ```bash
+   docker-compose up -d
+   ```
+
+## Configuration
+
+### Environment Variables
+
+| Variable | Description | Default |
+|----------|-------------|---------|
+| `GITHUB_TOKEN` | GitHub Personal Access Token | (none) |
+| `GITBACK_NOAUTH` | Run without authentication | `false` |
+| `GITBACK_THREADS` | Number of concurrent operations | `5` |
+| `GITBACK_USER` | GitHub username (required in no-auth mode) | (none) |
+| `GITBACK_OUTPUT_DIR` | Directory to store backups | `/data` (container) / `./data` (local) |
+| `GITBACK_TIMEOUT` | API request timeout in seconds | `30` |
+| `GITBACK_INCLUDE_GISTS` | Whether to include gists in backup | `true` |
+| `GITBACK_LOG_LEVEL` | Log level (debug, info, warn, error) | `info` |
+| `GITBACK_LOG_FORMAT` | Log format (text, json) | `text` |
+| `GITBACK_INCLUDE_GISTS` | Whether to include gists in backup | `true` |
+
+### Command Line Flags
+
+```
+Usage of gitback:
+  -no-gists
+        Skip backing up gists
+  -noauth
+        Disable GitHub Auth (limited to 60 requests/hour for public data only)
+  -output-dir string
+        Directory to store backups (default "~/gitbackup")
+  -thread int
+        Maximum number of concurrent connections (default 5)
+  -timeout int
+        Timeout in seconds for API requests (default 30)
+  -token string
+        GitHub API token (can also be set via GITHUB_TOKEN)
+  -username string
+        GitHub username (required when --noauth is set)
+  -version
+        Show version information and exit
 ```
 
-3. Build the project:
-
-```bash
-go build
-```
-
-4. (Optional) Set up a GitHub Personal Access Token (PAT) if you plan to backup private repositories. Instructions can be found [here](https://docs.github.com/en/authentication/keeping-your-account-and-data-secure/creating-a-personal-access-token).
-
-5. Add your GitHub Personal Access Token as environment variable:
-
-    ```
-    GITHUB_PERSONAL_ACCESS_TOKEN=your_token_here
-    ```
-
-    - **Windows:**
-
-        - Open Control Panel and navigate to System and Security > System > Advanced system settings > Environment Variables.
-        - Under System Variables, click "New" and add a variable named GITHUB_PERSONAL_ACCESS_TOKEN with your PAT as the value.
-
-    - **Linux (e.g., Ubuntu) & MacOS:**
-
-        - Open your terminal and edit the .bashrc or .zshrc file using your preferred text editor (e.g., nano, vim, gedit):
-
-        ```bash
-        nano ~/.bashrc
-        ```
-
-        - Add the following line at the end of the file:
-
-        ```bash
-        export GITHUB_PERSONAL_ACCESS_TOKEN=your_token_here
-        ```
-
-        - Save the file and exit. Then, reload the shell configuration:
-
-        ```bash
-        source ~/.bashrc
-        ```
-
-## Usage
-
-```bash
-./gitback [flags]
-```
-
-### Flags
-
-| Flag        | Description                                                                                       | Required                  |
-| ----------- | ------------------------------------------------------------------------------------------------- | ------------------------- |
-| `-noauth`   | Disable GitHub authentication. Limits requests to 60 per hour and access to public data only.     | No                        |
-| `-username` | Specify the GitHub username when using `-noauth`.                                                 | Yes (if `-noauth` is set) |
-| `-thread`  | Set the maximum number of concurrent connections (default: 10).                                   | No                        |
-| `-token`    | Provide the GitHub Personal Access Token directly as a flag (overrides the environment variable). | No                        |
-
-### Folder Structure
-
-When running the tool, the following folders will be created:
-
-- **`gitback-backup_YYYY-MM-DD_HH-MM-SS/repos/`**: Contains cloned repositories and their wikis.
-- **`gitback-backup_YYYY-MM-DD_HH-MM-SS/gists/`**: Contains cloned gists.
-
-## Examples
+## Usage Examples
 
 ### Backup Public Repositories (No Authentication)
 
@@ -97,6 +109,61 @@ When running the tool, the following folders will be created:
 ```
 
 ### Backup Private and Public Repositories (With Authentication)
+
+```bash
+# Using environment variable
+export GITHUB_TOKEN=your_github_token
+./gitback
+
+# Or using command line flag
+./gitback -token your_github_token
+```
+
+### Custom Output Directory and Concurrency
+
+```bash
+./gitback -output-dir /path/to/backup -thread 10
+```
+
+### Skip Gists
+
+```bash
+./gitback -no-gists
+```
+
+## Project Structure
+
+```
+gitback/
+├── cmd/
+│   └── gitback/         # Main application entry point
+├── internal/
+│   ├── types/          # Shared type definitions
+│   └── vcs/            # Version control system interfaces and implementations
+│       └── github/     # GitHub-specific implementation
+└── pkg/
+    └── config/         # Configuration management
+```
+
+## Development
+
+### Building and Testing
+
+```bash
+# Run tests
+go test ./...
+
+# Build with debug information
+go build -ldflags="-w -s" -o gitback ./cmd/gitback
+```
+
+### Code Style
+
+This project follows the standard Go code style. Please run `gofmt` and `golint` before submitting changes.
+
+## License
+
+[MIT](LICENSE)
 
 ```bash
 ./gitback

@@ -1,0 +1,112 @@
+# Git files
+.git
+.gitignore
+
+# Binaries
+bin/
+
+# IDE specific files
+.vscode/
+.idea/
+
+# Build artifacts
+*.exe
+*.exe~
+*.dll
+*.so
+*.dylib
+
+# Test files
+*_test.go
+*_test
+
+# Log files
+*.log
+
+# OS generated files
+.DS_Store
+.DS_Store?
+._*
+.Spotlight-V100
+.Trashes
+ehthumbs.db
+Thumbs.db
+
+# Local configuration
+.env
+*.env.local
+
+# Coverage files
+coverage.out
+coverage.html
+
+# Binaries for programs and plugins
+*.exe
+*.exe~
+*.dll
+*.so
+*.dylib
+
+# Output directory
+/output/
+
+# Dependency directories
+/vendor/
+
+# Go workspace file
+go.work
+
+# Binaries for programs and plugins
+*.exe
+*.exe~
+*.dll
+*.so
+*.dylib
+
+# Test binary, built with `go test -c`
+*.test
+
+# Output of the go coverage tool, specifically when used with LiteIDE
+*.out
+
+# IDE specific files
+.idea/
+.vscode/
+*.swp
+*.swo
+
+# Local development files
+.direnv/
+.envrc
+
+# Build output
+/dist/
+
+# Local development files
+*.local
+
+# Binaries for programs and plugins
+*.exe
+*.exe~
+*.dll
+*.so
+*.dylib
+
+# Test binary, built with `go test -c`
+*.test
+
+# Output of the go coverage tool, specifically when used with LiteIDE
+*.out
+
+# IDE specific files
+.idea/
+.vscode/
+*.swp
+*.swo
+
+# Local development files
+.direnv/
+.envrc
+
+# Build output
+/dist/

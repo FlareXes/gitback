@@ -1,32 +1,59 @@
-# Use the official Go image as a base
-FROM golang:1.23 AS builder
+# Build stage
+FROM golang:1.21-alpine AS builder
 
-# Set the working directory inside the container
+# Install build dependencies
+RUN apk add --no-cache git
+
+# Set working directory
 WORKDIR /app
 
-# Copy go.mod and go.sum files to the working directory
+# Copy go mod files
 COPY go.mod go.sum ./
 
 # Download dependencies
 RUN go mod download
 
-# Copy the entire project into the working directory
+# Copy source code
 COPY . .
 
-# Build the Go application
-RUN CGO_ENABLED=0 GOOS=linux go build -o gitback main.go
+# Build the application
+RUN CGO_ENABLED=0 GOOS=linux go build -ldflags="-w -s" -o /app/bin/gitback ./cmd/gitback
 
-# Start a new stage from scratch
+# Final stage
 FROM alpine:3.20
 
-# Install git
-RUN apk add --no-cache git
+# Install runtime dependencies
+RUN apk add --no-cache \
+    git \
+    openssh-client
 
-# Set the working directory for the final image
-WORKDIR /root/
+# Create a non-root user
+RUN addgroup -S appgroup && adduser -S appuser -G appgroup
 
-# Copy the binary from the builder stage
-COPY --from=builder /app/gitback .
+# Set working directory
+WORKDIR /app
 
-# Command to run the executable
-ENTRYPOINT ["/root/gitback"]
+# Copy binary from builder
+COPY --from=builder --chown=appuser:appgroup /app/bin/gitback /app/
+
+# Create data directory with correct permissions
+RUN mkdir -p /data && \
+    chown -R appuser:appgroup /data
+
+# Switch to non-root user
+USER appuser
+
+# Set volume for persistent data
+VOLUME ["/data"]
+
+# Set environment variables with defaults
+ENV GITBACK_OUTPUT_DIR=/data \
+    GITBACK_THREADS=5 \
+    GITBACK_TIMEOUT=30 \
+    GITBACK_INCLUDE_GISTS=true
+
+# Set the entrypoint
+ENTRYPOINT ["/app/gitback"]
+
+# Default command (can be overridden)
+CMD ["--help"]
