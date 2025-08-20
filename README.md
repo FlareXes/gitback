@@ -76,7 +76,6 @@ docker run --rm -e GITHUB_TOKEN=your_token -e GITBACK_USER=your_username -v $(pw
 | `GITBACK_INCLUDE_GISTS` | Whether to include gists in backup | `true` |
 | `GITBACK_LOG_LEVEL` | Log level (debug, info, warn, error) | `info` |
 | `GITBACK_LOG_FORMAT` | Log format (text, json) | `text` |
-| `GITBACK_INCLUDE_GISTS` | Whether to include gists in backup | `true` |
 
 ### Command Line Flags
 
@@ -160,20 +159,6 @@ go build -ldflags="-w -s" -o gitback ./cmd/gitback
 ### Code Style
 
 This project follows the standard Go code style. Please run `gofmt` and `golint` before submitting changes.
-
-## License
-
-[MIT](LICENSE)
-
-```bash
-./gitback
-```
-
-### Backup with Custom Thread Limit
-
-```bash
-./gitback -thread 20
-```
 
 ## Contributing
 
