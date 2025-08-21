@@ -51,8 +51,8 @@ func (g *GitHubVCS) listRepositories(ctx context.Context, username string) ([]*g
 func (g *GitHubVCS) checkRateLimit(resp *github.Response) error {
 	if resp.Rate.Remaining <= 10 {
 		sleepDuration := time.Until(resp.Rate.Reset.Time) + (10 * time.Second)
-		log.Printf("Approaching rate limit, sleeping for %v until %v\n", 
-			sleepDuration, 
+		log.Printf("Approaching rate limit, sleeping for %v until %v\n",
+			sleepDuration,
 			time.Now().Add(sleepDuration).Format(time.RFC3339))
 		time.Sleep(sleepDuration)
 	}
@@ -66,7 +66,7 @@ func (g *GitHubVCS) cloneRepository(ctx context.Context, repo *github.Repository
 	}
 
 	targetDir := filepath.Join(baseDir, *repo.Name)
-	
+
 	// Check if directory already exists
 	if _, err := os.Stat(targetDir); err == nil {
 		log.Printf("Repository %s already exists, pulling latest changes\n", *repo.Name)
@@ -87,7 +87,7 @@ func (g *GitHubVCS) cloneRepository(ctx context.Context, repo *github.Repository
 		}
 	}
 
-	cmd := exec.CommandContext(ctx, "git", "clone", "--mirror", cloneURL, targetDir)
+	cmd := exec.CommandContext(ctx, "git", "clone", "--mirror", cloneURL, *repo.Name)
 	cmd.Dir = baseDir
 
 	// Set up output capture
