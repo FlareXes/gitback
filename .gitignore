@@ -28,3 +28,8 @@ github-repositories-backup
 
 # Go workspace file
 go.work
+
+# Build Artifacts
+bin/
+coverage.out
+coverage.html
