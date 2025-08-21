@@ -87,6 +87,10 @@ func Validate(cfg *types.Config) error {
 		return errors.New("timeout must be greater than 0")
 	}
 
+	if cfg.OutputDir == "" {
+		return errors.New("output directory is required")
+	}
+
 	// Create output directory if it doesn't exist
 	if err := os.MkdirAll(cfg.OutputDir, 0755); err != nil {
 		return fmt.Errorf("failed to create output directory: %w", err)

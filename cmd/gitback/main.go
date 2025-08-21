@@ -36,7 +36,6 @@ import (
 	"log"
 	"os"
 	"os/signal"
-	"path/filepath"
 	"syscall"
 
 	"github.com/flarexes/gitback/internal/types"
@@ -156,15 +155,6 @@ func loadConfig() (*types.Config, error) {
 
 	if noGists {
 		cfg.IncludeGists = false
-	}
-
-	// If no output directory is specified, use default
-	if cfg.OutputDir == "" {
-		home, err := os.UserHomeDir()
-		if err != nil {
-			return nil, fmt.Errorf("failed to get user home directory: %w", err)
-		}
-		cfg.OutputDir = filepath.Join(home, "gitbackup")
 	}
 
 	return cfg, nil
