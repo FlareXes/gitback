@@ -255,14 +255,3 @@ func (g *GitHubVCS) Backup(ctx context.Context) error {
 
 	return nil
 }
-
-// getAuthType returns the authentication type based on configuration.
-func (g *GitHubVCS) getAuthType() string {
-	if g.config.NoAuth {
-		return "none"
-	}
-	if g.config.Token != "" {
-		return "token"
-	}
-	return "anonymous"
-}
