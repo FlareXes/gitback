@@ -79,13 +79,13 @@ func (g *GitHubVCS) cloneRepository(ctx context.Context, repo *github.Repository
 		return fmt.Errorf("failed to create directory %s: %w", baseDir, err)
 	}
 
-	// Build the git clone command
+	// Build the git clone URL
 	cloneURL := *repo.CloneURL
 	if g.config.Token != "" {
-		// Use SSH URL if we have a token (for private repos)
-		if repo.SSHURL != nil {
-			cloneURL = *repo.SSHURL
-		}
+		// Use token based URL if we have a token (for private repos)
+		// https://<token>@<repo-url>
+		cloneURL = fmt.Sprintf("https://%s@%s", g.config.Token, strings.TrimPrefix(*repo.CloneURL, "https://"))
+
 	}
 
 	cmd := exec.CommandContext(ctx, "git", "clone", "--mirror", cloneURL, *repo.Name)
