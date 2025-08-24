@@ -8,6 +8,7 @@ import (
 	"os"
 	"os/exec"
 	"path/filepath"
+	"strings"
 	"time"
 
 	"github.com/google/go-github/v59/github"
@@ -78,13 +79,13 @@ func (g *GitHubVCS) cloneRepository(ctx context.Context, repo *github.Repository
 		return fmt.Errorf("failed to create directory %s: %w", baseDir, err)
 	}
 
-	// Build the git clone command
+	// Build the git clone URL
 	cloneURL := *repo.CloneURL
 	if g.config.Token != "" {
-		// Use SSH URL if we have a token (for private repos)
-		if repo.SSHURL != nil {
-			cloneURL = *repo.SSHURL
-		}
+		// Use token based URL if we have a token (for private repos)
+		// https://<token>@<repo-url>
+		cloneURL = fmt.Sprintf("https://%s@%s", g.config.Token, strings.TrimPrefix(*repo.CloneURL, "https://"))
+
 	}
 
 	cmd := exec.CommandContext(ctx, "git", "clone", "--mirror", cloneURL, *repo.Name)
@@ -112,5 +113,53 @@ func (g *GitHubVCS) pullRepository(repoDir string) error {
 	}
 
 	log.Printf("Successfully updated repository at %s\n", repoDir)
+	return nil
+}
+
+// backupRepositories orchestrates the backup of all repositories for a user.
+func (g *GitHubVCS) backupRepositories(ctx context.Context, username string) error {
+	repos, err := g.listRepositories(ctx, username)
+	if err != nil {
+		return fmt.Errorf("failed to list repositories: %w", err)
+	}
+
+	log.Printf("Found %d repositories for user %s\n", len(repos), username)
+
+	// Create repositories directory
+	reposDir := filepath.Join(g.config.OutputDir, "repos")
+	if err := os.MkdirAll(reposDir, 0755); err != nil {
+		return fmt.Errorf("failed to create repositories directory: %w", err)
+	}
+
+	// Backup repositories concurrently
+	errChan := make(chan error, len(repos))
+	semaphore := make(chan struct{}, g.config.Threads)
+
+	for _, repo := range repos {
+		semaphore <- struct{}{} // Acquire semaphore
+		go func(r *github.Repository) {
+			defer func() { <-semaphore }() // Release semaphore when done
+
+			if r.Name == nil {
+				errChan <- fmt.Errorf("repository has no name")
+				return
+			}
+
+			if err := g.cloneRepository(ctx, r, reposDir); err != nil {
+				errChan <- fmt.Errorf("failed to backup repository %s: %w", *r.Name, err)
+				return
+			}
+
+			errChan <- nil
+		}(repo)
+	}
+
+	// Wait for all goroutines to complete
+	for i := 0; i < len(repos); i++ {
+		if err := <-errChan; err != nil {
+			log.Printf("Error during backup: %v", err)
+		}
+	}
+
 	return nil
 }

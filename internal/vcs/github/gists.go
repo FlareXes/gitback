@@ -4,7 +4,9 @@ import (
 	"context"
 	"encoding/json"
 	"fmt"
+	"io"
 	"log"
+	"net/http"
 	"os"
 	"path/filepath"
 
@@ -77,96 +79,42 @@ func (g *GitHubVCS) listGistsPage(ctx context.Context, username string, opt *git
 	return userGists, resp, nil
 }
 
-// backupGists backs up all gists for the given username.
+// backupGists orchestrates the backup of all gists for a user.
 func (g *GitHubVCS) backupGists(ctx context.Context, username string) error {
 	gists, err := g.listGists(ctx, username)
 	if err != nil {
 		return fmt.Errorf("failed to list gists: %w", err)
 	}
 
-	if len(gists) == 0 {
-		log.Println("No gists found to back up")
-		return nil
-	}
-
 	log.Printf("Found %d gists for user %s\n", len(gists), username)
 
-	// Create gists directory if it doesn't exist
+	// Create the gists directory if it doesn't exist
 	gistsDir := filepath.Join(g.config.OutputDir, "gists")
 	if err := os.MkdirAll(gistsDir, 0755); err != nil {
 		return fmt.Errorf("failed to create gists directory: %w", err)
 	}
 
-	errChan := make(chan error, len(gists))
-	semaphore := make(chan struct{}, g.config.Threads)
+	// Backup gists concurrently
+	gistErrChan := make(chan error, len(gists))
+	gistSemaphore := make(chan struct{}, g.config.Threads)
 
 	for _, gist := range gists {
 		if gist.ID == nil {
-			errChan <- fmt.Errorf("gist has no ID")
+			gistErrChan <- fmt.Errorf("gist has no ID")
 			continue
 		}
 
-		semaphore <- struct{}{} // Acquire semaphore
+		gistSemaphore <- struct{}{} // Acquire semaphore
 		go func(gist *github.Gist) {
-			defer func() { <-semaphore }() // Release semaphore when done
+			defer func() { <-gistSemaphore }() // Release semaphore when done
 
-			// Create gist directory
-			gistDir := filepath.Join(gistsDir, *gist.ID)
-			if err := os.MkdirAll(gistDir, 0755); err != nil {
-				errChan <- fmt.Errorf("failed to create gist directory %s: %w", *gist.ID, err)
+			if err := g.backupSingleGist(gist, gistsDir); err != nil {
+				gistErrChan <- fmt.Errorf("failed to backup gist %s: %w", *gist.ID, err)
 				return
-			}
-
-			// Save gist metadata
-			metadataFile := filepath.Join(gistDir, "gist.json")
-			metadata, err := json.MarshalIndent(gist, "", "  ")
-			if err != nil {
-				errChan <- fmt.Errorf("failed to marshal gist metadata %s: %w", *gist.ID, err)
-				return
-			}
-
-			if err := os.WriteFile(metadataFile, metadata, 0644); err != nil {
-				errChan <- fmt.Errorf("failed to save gist metadata %s: %w", *gist.ID, err)
-				return
-			}
-
-			// Save each file in the gist
-			for filename, file := range gist.Files {
-				// Skip invalid files
-				if file.Filename == nil {
-					continue
-				}
-
-				// Get file content (might be nil for large files)
-				content := ""
-				if file.Content != nil {
-					content = *file.Content
-				} else if file.RawURL != nil {
-					// For large files, we'd need to fetch the content from RawURL
-					// This is a simplified version - in production, you'd want to handle this properly
-					log.Printf("Skipping large file %s (content not included in gist response)", *file.Filename)
-					continue
-				}
-
-				// Create necessary subdirectories
-				filePath := filepath.Join(gistDir, *file.Filename)
-				dir := filepath.Dir(filePath)
-				if dir != "." {
-					if err := os.MkdirAll(dir, 0755); err != nil {
-						errChan <- fmt.Errorf("failed to create directory for gist file %s: %w", filename, err)
-						continue
-					}
-				}
-
-				// Write file content
-				if err := os.WriteFile(filePath, []byte(content), 0644); err != nil {
-					errChan <- fmt.Errorf("failed to save gist file %s: %w", filename, err)
-					continue
-				}
 			}
 
 			log.Printf("Successfully backed up gist: %s\n", *gist.ID)
-			errChan <- nil
+			gistErrChan <- nil
 		}(gist)
 
 		// Check if context is done
@@ -178,12 +126,128 @@ func (g *GitHubVCS) backupGists(ctx context.Context, username string) error {
 		}
 	}
 
-	// Wait for all goroutines to complete
+	// Wait for all gist backups to complete
 	for i := 0; i < len(gists); i++ {
-		if err := <-errChan; err != nil {
+		if err := <-gistErrChan; err != nil {
 			log.Printf("Error during gist backup: %v", err)
 		}
 	}
 
 	return nil
+}
+
+// backupSingleGist backs up a single gist to the specified directory.
+func (g *GitHubVCS) backupSingleGist(gist *github.Gist, baseDir string) error {
+	if gist.ID == nil {
+		return fmt.Errorf("gist has no ID")
+	}
+
+	// Create gist directory
+	gistDir := filepath.Join(baseDir, *gist.ID)
+	if err := os.MkdirAll(gistDir, 0755); err != nil {
+		return fmt.Errorf("failed to create gist directory %s: %w", *gist.ID, err)
+	}
+
+	// Save gist metadata
+	if err := g.saveGistMetadata(gist, gistDir); err != nil {
+		return fmt.Errorf("failed to save gist metadata: %w", err)
+	}
+
+	// Save each file in the gist
+	if err := g.saveGistFiles(gist, gistDir); err != nil {
+		return fmt.Errorf("failed to save gist files: %w", err)
+	}
+
+	return nil
+}
+
+// saveGistMetadata saves the gist metadata as a JSON file.
+func (g *GitHubVCS) saveGistMetadata(gist *github.Gist, gistDir string) error {
+	metadataFile := filepath.Join(gistDir, "gist.json")
+	metadata, err := json.MarshalIndent(gist, "", "  ")
+	if err != nil {
+		return fmt.Errorf("failed to marshal gist metadata: %w", err)
+	}
+
+	if err := os.WriteFile(metadataFile, metadata, 0644); err != nil {
+		return fmt.Errorf("failed to save gist metadata: %w", err)
+	}
+
+	return nil
+}
+
+// saveGistFiles saves all files in a gist to the specified directory.
+func (g *GitHubVCS) saveGistFiles(gist *github.Gist, gistDir string) error {
+	for _, file := range gist.Files {
+		// Skip files without a filename
+		if file.Filename == nil {
+			log.Printf("Skipping gist file with no filename in gist %s", *gist.ID)
+			continue
+		}
+
+		if err := g.saveGistFile(file, gistDir); err != nil {
+			log.Printf("Failed to save gist file %s: %v", *file.Filename, err)
+			continue
+		}
+	}
+
+	return nil
+}
+
+// saveGistFile saves a single gist file to the specified directory.
+func (g *GitHubVCS) saveGistFile(file github.GistFile, gistDir string) error {
+	// Get the filename safely
+	filenameStr := *file.Filename
+
+	// Get file content (might be nil for large files)
+	content, err := g.getGistFileContent(file)
+	if err != nil {
+		return fmt.Errorf("failed to get content for file %s: %w", filenameStr, err)
+	}
+
+	// Create necessary subdirectories
+	filePath := filepath.Join(gistDir, filenameStr)
+	dir := filepath.Dir(filePath)
+	if dir != "." {
+		if err := os.MkdirAll(dir, 0755); err != nil {
+			return fmt.Errorf("failed to create directory for gist file %s: %w", filenameStr, err)
+		}
+	}
+
+	// Write file content
+	if err := os.WriteFile(filePath, []byte(content), 0644); err != nil {
+		return fmt.Errorf("failed to save gist file %s: %w", filenameStr, err)
+	}
+
+	return nil
+}
+
+// getGistFileContent retrieves the content of a gist file.
+func (g *GitHubVCS) getGistFileContent(file github.GistFile) (string, error) {
+	// Get file content (might be nil for large files)
+	if file.Content != nil {
+		return *file.Content, nil
+	}
+
+	if file.RawURL != nil {
+		// Try to fetch the content from RawURL
+		resp, err := http.Get(*file.RawURL)
+		if err != nil {
+			return "", fmt.Errorf("failed to fetch content for large file: %w", err)
+		}
+		defer resp.Body.Close()
+
+		if resp.StatusCode != http.StatusOK {
+			return "", fmt.Errorf("failed to fetch content: %s", resp.Status)
+		}
+
+		contentBytes, err := io.ReadAll(resp.Body)
+		if err != nil {
+			return "", fmt.Errorf("failed to read content: %w", err)
+		}
+
+		return string(contentBytes), nil
+	}
+
+	return "", fmt.Errorf("no content available for file")
 }
