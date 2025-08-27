@@ -3,12 +3,12 @@ package github
 
 import (
 	"context"
+	"encoding/base64"
 	"fmt"
 	"log"
 	"os"
 	"os/exec"
 	"path/filepath"
-	"strings"
 	"time"
 
 	"github.com/google/go-github/v59/github"
@@ -25,7 +25,17 @@ func (g *GitHubVCS) listRepositories(ctx context.Context, username string) ([]*g
 	}
 
 	for {
-		repos, resp, err := g.client.Repositories.List(ctx, username, opts)
+		// If authenticated (token present), use the authenticated user's endpoint to include private repos
+		var (
+			repos []*github.Repository
+			resp  *github.Response
+			err   error
+		)
+		if g.config.Token != "" && !g.config.NoAuth {
+			repos, resp, err = g.client.Repositories.List(ctx, "", opts)
+		} else {
+			repos, resp, err = g.client.Repositories.List(ctx, username, opts)
+		}
 		if err != nil {
 			return nil, fmt.Errorf("error listing repositories: %w", err)
 		}
@@ -60,6 +70,14 @@ func (g *GitHubVCS) checkRateLimit(resp *github.Response) error {
 	return nil
 }
 
+// basicAuthHeader builds an Authorization header value suitable for Git over HTTPS with a PAT.
+// GitHub expects Basic auth with username "x-access-token" and the token as the password.
+func (g *GitHubVCS) basicAuthHeader() string {
+	creds := "x-access-token:" + g.config.Token
+	b64 := base64.StdEncoding.EncodeToString([]byte(creds))
+	return "Authorization: Basic " + b64
+}
+
 // cloneRepository clones a single repository to the specified directory.
 func (g *GitHubVCS) cloneRepository(ctx context.Context, repo *github.Repository, baseDir string) error {
 	if repo == nil || repo.CloneURL == nil || repo.Name == nil {
@@ -79,16 +97,13 @@ func (g *GitHubVCS) cloneRepository(ctx context.Context, repo *github.Repository
 		return fmt.Errorf("failed to create directory %s: %w", baseDir, err)
 	}
 
-	// Build the git clone URL
-	cloneURL := *repo.CloneURL
+	// Build the git clone command using HTTPS and pass token via http.extraHeader (Basic auth)
+	args := []string{"clone", "--mirror"}
 	if g.config.Token != "" {
-		// Use token based URL if we have a token (for private repos)
-		// https://<token>@<repo-url>
-		cloneURL = fmt.Sprintf("https://%s@%s", g.config.Token, strings.TrimPrefix(*repo.CloneURL, "https://"))
-
+		args = append([]string{"-c", "http.extraHeader=" + g.basicAuthHeader()}, args...)
 	}
-
-	cmd := exec.CommandContext(ctx, "git", "clone", "--mirror", cloneURL, *repo.Name)
+	args = append(args, *repo.CloneURL, *repo.Name)
+	cmd := exec.CommandContext(ctx, "git", args...)
 	cmd.Dir = baseDir
 
 	// Set up output capture
@@ -104,7 +119,11 @@ func (g *GitHubVCS) cloneRepository(ctx context.Context, repo *github.Repository
 // pullRepository updates an existing repository
 func (g *GitHubVCS) pullRepository(repoDir string) error {
 	// Change to the repository directory
-	cmd := exec.Command("git", "remote", "update", "--prune")
+	args := []string{"remote", "update", "--prune"}
+	if g.config.Token != "" {
+		args = append([]string{"-c", "http.extraHeader=" + g.basicAuthHeader()}, args...)
+	}
+	cmd := exec.Command("git", args...)
 	cmd.Dir = repoDir
 
 	output, err := cmd.CombinedOutput()
