@@ -51,9 +51,8 @@ func (g *GitHubVCS) listGists(ctx context.Context, username string) ([]*github.G
 
 // listGistsPage fetches a single page of gists.
 func (g *GitHubVCS) listGistsPage(ctx context.Context, username string, opt *github.GistListOptions) ([]*github.Gist, *github.Response, error) {
-	if g.config.NoAuth || g.config.User == username {
-		// In no-auth mode or when listing our own gists,
-		// we can use the simpler List API.
+	// When unauthenticated, List(username) returns only public gists
+	if g.config.NoAuth || g.config.Token == "" {
 		gists, resp, err := g.client.Gists.List(ctx, username, opt)
 		if err != nil {
 			return nil, nil, fmt.Errorf("failed to list gists for user %s: %w", username, err)
@@ -61,22 +60,13 @@ func (g *GitHubVCS) listGistsPage(ctx context.Context, username string, opt *git
 		return gists, resp, nil
 	}
 
-	// For authenticated requests, we need to list all gists and filter them
-	// since GitHub API doesn't support searching gists by user in the same way as repositories.
-	gists, resp, err := g.client.Gists.ListAll(ctx, opt)
+	// When authenticated, use empty username to fetch the authenticated user's gists,
+	// which includes private gists.
+	gists, resp, err := g.client.Gists.List(ctx, "", opt)
 	if err != nil {
-		return nil, nil, fmt.Errorf("failed to list all gists: %w", err)
+		return nil, nil, fmt.Errorf("failed to list authenticated user's gists: %w", err)
 	}
-
-	// Filter gists by owner
-	var userGists []*github.Gist
-	for _, gist := range gists {
-		if gist.Owner != nil && gist.Owner.Login != nil && *gist.Owner.Login == username {
-			userGists = append(userGists, gist)
-		}
-	}
-
-	return userGists, resp, nil
+	return gists, resp, nil
 }
 
 // backupGists orchestrates the backup of all gists for a user.
