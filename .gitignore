@@ -2,7 +2,7 @@
 # https://github.com/github/gitignore/blob/main/community/Golang/Go.AllowList.gitignore
 #
 # Custom ignore rules
-# Plan.md
+tmp/
 
 # Binaries for programs and plugins
 *.exe
