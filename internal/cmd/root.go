@@ -19,4 +19,5 @@ func init() {
 	rootCmd.AddCommand(initCmd)
 	rootCmd.AddCommand(discoverCmd)
 	rootCmd.AddCommand(syncCmd)
+	rootCmd.AddCommand(snapshotCmd)
 }
