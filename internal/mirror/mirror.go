@@ -15,6 +15,7 @@ import (
 
 	"github.com/flarexes/gitback/internal/config"
 	"github.com/flarexes/gitback/internal/logging"
+	"github.com/flarexes/gitback/internal/state"
 )
 
 type Engine struct {
@@ -30,6 +31,9 @@ func New(cfg *config.Config, logger *logging.Logger) *Engine {
 }
 
 func (e *Engine) Sync(ctx context.Context) error {
+
+	// Consumed for integrity check during snapshot
+	var repositories []state.Repository
 
 	file, err := os.Open(e.cfg.RepoInventory)
 	if err != nil {
@@ -55,10 +59,30 @@ func (e *Engine) Sync(ctx context.Context) error {
 				err,
 			)
 
+			repositories = append(repositories, state.Repository{
+				Name:        repo,
+				LastSuccess: false,
+				Error:       err.Error(),
+			})
+
 			continue
 		}
 
+		repositories = append(repositories, state.Repository{
+			Name:        repo,
+			LastSuccess: true,
+		})
+
 		e.cooldown()
+	}
+
+	if err := state.Save(e.cfg.MirrorsStateFile, repositories); err != nil {
+
+		e.logger.Error(
+			logging.Events.Mirror.StateSaveFailed,
+			"",
+			err,
+		)
 	}
 
 	return scanner.Err()

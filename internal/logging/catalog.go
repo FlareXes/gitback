@@ -20,12 +20,18 @@ type MirrorEvents struct {
 	FsckStarted   string
 	FsckCompleted string
 	FsckFailed    string
+
+	StateSaveFailed string
 }
 
 type SnapshotEvents struct {
 	Started   string
 	Completed string
 	Failed    string
+
+	VerificationStarted string
+	VerificationPassed  string
+	VerificationFailed  string
 }
 
 type LockEvents struct {
@@ -87,6 +93,8 @@ var Events = EventCatalog{
 		FsckStarted:   "mirror_fsck_started",
 		FsckCompleted: "mirror_fsck_completed",
 		FsckFailed:    "mirror_fsck_failed",
+
+		StateSaveFailed: "mirror_state_save_failed",
 	},
 
 	Sync: SyncEvents{
@@ -99,6 +107,10 @@ var Events = EventCatalog{
 		Started:   "snapshot_started",
 		Completed: "snapshot_completed",
 		Failed:    "snapshot_failed",
+
+		VerificationStarted: "snapshot_verification_started",
+		VerificationPassed:  "snapshot_verification_passed",
+		VerificationFailed:  "snapshot_verification_failed",
 	},
 
 	Lock: LockEvents{

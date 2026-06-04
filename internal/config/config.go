@@ -22,11 +22,15 @@ type Config struct {
 	ConfigDir   string `mapstructure:"config_dir"`
 	MirrorDir   string `mapstructure:"mirror_dir"`
 	SnapshotDir string `mapstructure:"snapshot_dir"`
-	StateDir    string `mapstructure:"state_dir"`
-	LogDir      string `mapstructure:"log_dir"`
-	LogFile     string `mapstructure:"log_file"`
-	HealthDir   string `mapstructure:"health_dir"`
-	TempDir     string `mapstructure:"temp_dir"`
+
+	StateDir         string `mapstructure:"state_dir"`
+	MirrorsStateFile string `mapstructure:"mirrors_state_file"`
+
+	LogDir  string `mapstructure:"log_dir"`
+	LogFile string `mapstructure:"log_file"`
+
+	HealthDir string `mapstructure:"health_dir"`
+	TempDir   string `mapstructure:"temp_dir"`
 
 	RepoInventory string `mapstructure:"repo_inventory"`
 	LockFile      string `mapstructure:"lock_file"`
@@ -48,11 +52,15 @@ func Default() Config {
 		ConfigDir:   "/tmp/gitback",
 		MirrorDir:   filepath.Join(base, "mirrors"),
 		SnapshotDir: filepath.Join(base, "snapshots"),
-		StateDir:    filepath.Join(base, "state"),
-		LogDir:      "/tmp/log/gitback",
-		LogFile:     "/tmp/log/gitback/gitback.log",
-		HealthDir:   "/tmp/log/gitback/health",
-		TempDir:     filepath.Join(base, "tmp"),
+
+		StateDir:         filepath.Join(base, "state"),
+		MirrorsStateFile: filepath.Join(base, "state", "mirrors.json"),
+
+		LogDir:  "/tmp/log/gitback",
+		LogFile: "/tmp/log/gitback/gitback.log",
+
+		HealthDir: "/tmp/log/gitback/health",
+		TempDir:   filepath.Join(base, "tmp"),
 
 		RepoInventory: filepath.Join(base, "state", "repositories.txt"),
 		LockFile:      filepath.Join(base, "state", "gitback.lock"),
@@ -102,13 +110,17 @@ base_dir: %s
 config_dir: %s
 mirror_dir: %s
 snapshot_dir: %s
+
 state_dir: %s
+mirrors_state_file: %s
+
 log_dir: %s
+log_file: %s
+
 health_dir: %s
 temp_dir: %s
 
 repo_inventory: %s
-log_file: %s
 lock_file: %s
 
 cooldown_min_seconds: %d
@@ -123,13 +135,17 @@ minimum_free_disk_percent: %d
 		cfg.ConfigDir,
 		cfg.MirrorDir,
 		cfg.SnapshotDir,
+
 		cfg.StateDir,
+		cfg.MirrorsStateFile,
+
 		cfg.LogDir,
+		cfg.LogFile,
+
 		cfg.HealthDir,
 		cfg.TempDir,
 
 		cfg.RepoInventory,
-		cfg.LogFile,
 		cfg.LockFile,
 
 		cfg.CooldownMinSeconds,

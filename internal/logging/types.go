@@ -27,3 +27,14 @@ type Entry struct {
 
 	Details any `json:"details,omitempty"`
 }
+
+type MirrorState struct {
+	Name        string `json:"name"`
+	LastSuccess bool   `json:"last_success"`
+	Error       string `json:"error,omitempty"`
+}
+
+type MirrorsState struct {
+	GeneratedAt  string        `json:"generated_at"`
+	Repositories []MirrorState `json:"repositories"`
+}
