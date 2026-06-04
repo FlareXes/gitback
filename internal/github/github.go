@@ -47,8 +47,8 @@ func (c *Client) Discover(ctx context.Context) error {
 
 	var lastResponse *github.Response
 
-	opt := &github.RepositoryListByUserOptions{
-		Type: "owner",
+	opt := &github.RepositoryListByAuthenticatedUserOptions{
+		Visibility: "all",
 
 		ListOptions: github.ListOptions{
 			PerPage: 100,
@@ -58,9 +58,8 @@ func (c *Client) Discover(ctx context.Context) error {
 	// GitHub pagination: GitHub only returns a limited number of repos per request.
 	for {
 
-		repos, resp, err := c.api.Repositories.ListByUser(
+		repos, resp, err := c.api.Repositories.ListByAuthenticatedUser(
 			ctx,
-			c.cfg.GitHubOwner,
 			opt,
 		)
 
