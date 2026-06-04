@@ -24,11 +24,11 @@ type Config struct {
 	SnapshotDir string `mapstructure:"snapshot_dir"`
 	StateDir    string `mapstructure:"state_dir"`
 	LogDir      string `mapstructure:"log_dir"`
+	LogFile     string `mapstructure:"log_file"`
 	HealthDir   string `mapstructure:"health_dir"`
 	TempDir     string `mapstructure:"temp_dir"`
 
 	RepoInventory string `mapstructure:"repo_inventory"`
-	LogFile       string `mapstructure:"log_file"`
 	LockFile      string `mapstructure:"lock_file"`
 
 	CooldownMinSeconds int `mapstructure:"cooldown_min_seconds"`
@@ -50,11 +50,11 @@ func Default() Config {
 		SnapshotDir: filepath.Join(base, "snapshots"),
 		StateDir:    filepath.Join(base, "state"),
 		LogDir:      "/tmp/log/gitback",
+		LogFile:     "/tmp/log/gitback/gitback.log",
 		HealthDir:   "/tmp/log/gitback/health",
 		TempDir:     filepath.Join(base, "tmp"),
 
 		RepoInventory: filepath.Join(base, "state", "repositories.txt"),
-		LogFile:       "/tmp/log/gitback/gitback.log",
 		LockFile:      filepath.Join(base, "state", "gitback.lock"),
 
 		CooldownMinSeconds: 60,

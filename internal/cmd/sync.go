@@ -23,7 +23,7 @@ var syncCmd = &cobra.Command{
 			return err
 		}
 
-		logger, err := logging.New(cfg.LogDir)
+		logger, err := logging.New(cfg.LogFile)
 		if err != nil {
 			return err
 		}
