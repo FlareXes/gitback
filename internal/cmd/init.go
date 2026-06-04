@@ -60,6 +60,22 @@ var initCmd = &cobra.Command{
 			return fmt.Errorf("github username cannot be empty")
 		}
 
+		fmt.Println("")
+		fmt.Println("Create a GitHub Personal Access Token.")
+		fmt.Println("")
+		fmt.Println("Option 1: Classic PAT:")
+		fmt.Println("  Scope:")
+		fmt.Println("    repo")
+		fmt.Println("")
+		fmt.Println("Option 2: Fine-grained PAT:")
+		fmt.Println("  Repository access:")
+		fmt.Println("    All repositories")
+		fmt.Println("")
+		fmt.Println("  Permissions:")
+		fmt.Println("    Contents: Read-only")
+		fmt.Println("    Metadata: Read-only")
+		fmt.Println("")
+
 		fmt.Print("GitHub token: ")
 
 		// Get GitHub token (PAT - Personal Access Token)
