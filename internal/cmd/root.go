@@ -20,4 +20,5 @@ func init() {
 	rootCmd.AddCommand(discoverCmd)
 	rootCmd.AddCommand(syncCmd)
 	rootCmd.AddCommand(snapshotCmd)
+	rootCmd.AddCommand(doctorCmd)
 }
