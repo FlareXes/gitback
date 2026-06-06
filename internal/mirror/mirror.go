@@ -35,6 +35,9 @@ func (e *Engine) Sync(ctx context.Context) error {
 	// Consumed for integrity check during snapshot
 	var repositories []state.Repository
 
+	// Time Sync
+	var syncStartedAt = time.Now()
+
 	file, err := os.Open(e.cfg.RepoInventory)
 	if err != nil {
 		return err
@@ -76,7 +79,16 @@ func (e *Engine) Sync(ctx context.Context) error {
 		e.cooldown()
 	}
 
-	if err := state.Save(e.cfg.MirrorsStateFile, repositories); err != nil {
+	// Time Sync
+	var syncCompletedAt = time.Now()
+
+	// Save mirrors metabase
+	if err := state.Save(
+		e.cfg.MirrorsStateFile,
+		syncStartedAt,
+		syncCompletedAt,
+		repositories,
+	); err != nil {
 
 		e.logger.Error(
 			logging.Events.Mirror.StateSaveFailed,

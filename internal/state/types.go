@@ -9,6 +9,8 @@ type Repository struct {
 }
 
 type Mirrors struct {
-	GeneratedAt  string       `json:"generated_at"`
-	Repositories []Repository `json:"repositories"`
+	GeneratedAt     string       `json:"generated_at"`
+	SyncStartedAt   string       `json:"sync_started_at,omitempty"`
+	SyncCompletedAt string       `json:"sync_completed_at,omitempty"`
+	Repositories    []Repository `json:"repositories"`
 }

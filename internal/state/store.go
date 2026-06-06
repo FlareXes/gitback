@@ -8,10 +8,23 @@ import (
 	"time"
 )
 
-func Save(path string, repositories []Repository) error {
+func Save(
+	path string,
+	syncStartedAt time.Time,
+	syncCompletedAt time.Time,
+	repositories []Repository,
+) error {
 
 	data := Mirrors{
 		GeneratedAt: time.Now().
+			UTC().
+			Format(time.RFC3339),
+
+		SyncStartedAt: syncStartedAt.
+			UTC().
+			Format(time.RFC3339),
+
+		SyncCompletedAt: syncCompletedAt.
 			UTC().
 			Format(time.RFC3339),
 
