@@ -21,4 +21,5 @@ func init() {
 	rootCmd.AddCommand(syncCmd)
 	rootCmd.AddCommand(snapshotCmd)
 	rootCmd.AddCommand(doctorCmd)
+	rootCmd.AddCommand(healthCmd)
 }
