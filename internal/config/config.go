@@ -65,10 +65,10 @@ func Default() Config {
 		RepoInventory: filepath.Join(base, "state", "repositories.txt"),
 		LockFile:      filepath.Join(base, "state", "gitback.lock"),
 
-		CooldownMinSeconds: 60,
-		CooldownMaxSeconds: 120,
+		CooldownMinSeconds: 0,
+		CooldownMaxSeconds: 5,
 
-		MinimumFreeDiskPercent: 15,
+		MinimumFreeDiskPercent: 20,
 	}
 }
 
