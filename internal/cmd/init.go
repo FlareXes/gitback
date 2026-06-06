@@ -23,15 +23,14 @@ var initCmd = &cobra.Command{
 		cfg := config.Default()
 
 		dirs := []string{
-			cfg.BaseDir,
 			cfg.ConfigDir,
+			cfg.DataDir,
 
 			cfg.MirrorDir,
 			cfg.SnapshotDir,
 			cfg.StateDir,
 
 			cfg.LogDir,
-			cfg.HealthDir,
 
 			cfg.TempDir,
 		}
@@ -44,23 +43,6 @@ var initCmd = &cobra.Command{
 
 		}
 
-		// Get GitHub username
-		reader := bufio.NewReader(os.Stdin)
-
-		fmt.Print("GitHub username: ")
-
-		owner, err := reader.ReadString('\n')
-		if err != nil {
-			return err
-		}
-
-		owner = strings.TrimSpace(owner)
-
-		if owner == "" {
-			return fmt.Errorf("github username cannot be empty")
-		}
-
-		fmt.Println("")
 		fmt.Println("Create a GitHub Personal Access Token.")
 		fmt.Println("")
 		fmt.Println("Option 1: Classic PAT:")
@@ -75,6 +57,9 @@ var initCmd = &cobra.Command{
 		fmt.Println("    Contents: Read-only")
 		fmt.Println("    Metadata: Read-only")
 		fmt.Println("")
+
+		// Get GitHub username
+		reader := bufio.NewReader(os.Stdin)
 
 		fmt.Print("GitHub token: ")
 
@@ -115,8 +100,6 @@ var initCmd = &cobra.Command{
 				err,
 			)
 		}
-
-		cfg.GitHubOwner = owner
 
 		configPath := filepath.Join(cfg.ConfigDir, "config.yaml")
 

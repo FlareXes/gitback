@@ -77,7 +77,7 @@ func Generate(cfg *config.Config) (*HealthReport, error) {
 	// Disk usage.
 	var stat syscall.Statfs_t
 
-	if err := syscall.Statfs(cfg.BaseDir, &stat); err == nil {
+	if err := syscall.Statfs(cfg.DataDir, &stat); err == nil {
 
 		total := stat.Blocks
 		free := stat.Bavail

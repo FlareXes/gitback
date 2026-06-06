@@ -169,7 +169,7 @@ func (e *Engine) verifyMirrors() error {
 func (e *Engine) createTar(ctx context.Context, output string) error {
 
 	// Equivalent shell command:
-	// tar -cf <output> -C <baseDir> mirrors state/mirrors.json
+	// tar -cf <output> -C <dataDir> mirrors state/mirrors.json
 	cmd := exec.CommandContext(
 		ctx,
 		"tar",
@@ -177,7 +177,7 @@ func (e *Engine) createTar(ctx context.Context, output string) error {
 		output,
 
 		"-C",
-		e.cfg.BaseDir,
+		e.cfg.DataDir,
 
 		"mirrors",
 

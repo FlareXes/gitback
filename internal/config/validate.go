@@ -1,3 +1,5 @@
+// internal/config/validate.go
+
 package config
 
 import (
@@ -11,51 +13,10 @@ func (c *Config) Validate() error {
 
 	var issues []string
 
-	//
-	// GitHub settings
-	//
-
-	if c.GitHubOwner == "" ||
-		c.GitHubOwner == "CHANGE_ME" {
-
-		issues = append(
-			issues,
-			"github_owner is not configured",
-		)
-	}
-
-	if c.TokenFile == "" {
-
-		issues = append(
-			issues,
-			"token_file is not configured",
-		)
-	}
-
-	if c.GitHubToken == "" {
-
-		issues = append(
-			issues,
-			fmt.Sprintf(
-				"github token missing or empty (%s)",
-				c.TokenFile,
-			),
-		)
-	}
-
-	//
-	// Required directories
-	//
-
 	requiredDirs := map[string]string{
-		"base_dir":     c.BaseDir,
-		"config_dir":   c.ConfigDir,
-		"mirror_dir":   c.MirrorDir,
-		"snapshot_dir": c.SnapshotDir,
-		"state_dir":    c.StateDir,
-		"log_dir":      c.LogDir,
-		"health_dir":   c.HealthDir,
-		"temp_dir":     c.TempDir,
+		"config_dir": c.ConfigDir,
+		"data_dir":   c.DataDir,
+		"log_dir":    c.LogDir,
 	}
 
 	for name, path := range requiredDirs {
@@ -102,21 +63,19 @@ func (c *Config) Validate() error {
 		}
 	}
 
-	//
-	// Required file paths
-	//
-	// These do not necessarily need to exist yet,
-	// but they must be configured.
-	//
-
-	requiredFiles := map[string]string{
-		"repo_inventory": c.RepoInventory,
-		"log_file":       c.LogFile,
-		"lock_file":      c.LockFile,
-		"token_file":     c.TokenFile,
+	requiredPaths := map[string]string{
+		"token_file":         c.TokenFile,
+		"state_dir":          c.StateDir,
+		"mirror_dir":         c.MirrorDir,
+		"snapshot_dir":       c.SnapshotDir,
+		"temp_dir":           c.TempDir,
+		"repo_inventory":     c.RepoInventory,
+		"lock_file":          c.LockFile,
+		"log_file":           c.LogFile,
+		"mirrors_state_file": c.MirrorsStateFile,
 	}
 
-	for name, path := range requiredFiles {
+	for name, path := range requiredPaths {
 
 		if path == "" {
 
@@ -130,9 +89,24 @@ func (c *Config) Validate() error {
 		}
 	}
 
-	//
-	// Cooldown validation
-	//
+	if c.TokenFile == "" {
+
+		issues = append(
+			issues,
+			"token_file is not configured",
+		)
+	}
+
+	if c.GitHubToken == "" {
+
+		issues = append(
+			issues,
+			fmt.Sprintf(
+				"github token missing or empty (%s)",
+				c.TokenFile,
+			),
+		)
+	}
 
 	if c.CooldownMinSeconds < 0 {
 
@@ -159,10 +133,6 @@ func (c *Config) Validate() error {
 		)
 	}
 
-	//
-	// Disk threshold validation
-	//
-
 	if c.MinimumFreeDiskPercent < 0 ||
 		c.MinimumFreeDiskPercent > 100 {
 
@@ -172,15 +142,12 @@ func (c *Config) Validate() error {
 		)
 	}
 
-	//
-	// Final result
-	//
-
 	if len(issues) == 0 {
 		return nil
 	}
 
 	var msg strings.Builder
+
 	msg.WriteString("configuration validation failed:\n")
 
 	for _, issue := range issues {
