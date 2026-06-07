@@ -30,6 +30,61 @@ func New(cfg *config.Config, logger *logging.Logger) *Engine {
 	}
 }
 
+// Execute a git command with retry support.
+func (e *Engine) runGit(
+	ctx context.Context,
+	repo string,
+	env []string,
+	args ...string,
+) ([]byte, error) {
+
+	var lastErr error
+
+	for attempt := 1; attempt <= e.cfg.GitRetryAttempts; attempt++ {
+
+		cmd := exec.CommandContext(
+			ctx,
+			"git",
+			args...,
+		)
+
+		cmd.Env = env
+
+		output, err := cmd.CombinedOutput()
+
+		if err == nil {
+			return output, nil
+		}
+
+		lastErr = err
+
+		if attempt == e.cfg.GitRetryAttempts {
+			break
+		}
+
+		e.logger.Emit(
+			logging.Entry{
+				Level: logging.Warn,
+				Event: logging.Events.Mirror.Retry,
+
+				Repo: repo,
+
+				Details: map[string]any{
+					"attempt":      attempt,
+					"max_attempts": e.cfg.GitRetryAttempts,
+				},
+			},
+		)
+
+		// Linear backoff: attempt 1 -> 5s, attempt 2 -> 10s
+		wait := time.Duration(attempt*5) * time.Second
+
+		time.Sleep(wait)
+	}
+
+	return nil, lastErr
+}
+
 func (e *Engine) Sync(ctx context.Context) error {
 
 	// Consumed for integrity check during snapshot
@@ -132,18 +187,18 @@ func (e *Engine) cloneMirror(ctx context.Context, repo string, target string) er
 
 	defer os.Remove(askPass)
 
-	cmd := exec.CommandContext(
+	// output, err := cmd.CombinedOutput()
+	output, err := e.runGit(
 		ctx,
-		"git",
+		repoName,
+		e.gitEnv(askPass),
+
 		"clone",
 		"--mirror",
 		repo,
 		target,
 	)
 
-	cmd.Env = e.gitEnv(askPass)
-
-	output, err := cmd.CombinedOutput()
 	if err != nil {
 
 		e.logger.Error(
@@ -184,9 +239,11 @@ func (e *Engine) updateMirror(ctx context.Context, target string) error {
 
 	defer os.Remove(askPass)
 
-	cmd := exec.CommandContext(
+	output, err := e.runGit(
 		ctx,
-		"git",
+		repoName,
+		e.gitEnv(askPass),
+
 		"-C",
 		target,
 		"remote",
@@ -194,9 +251,6 @@ func (e *Engine) updateMirror(ctx context.Context, target string) error {
 		"--prune",
 	)
 
-	cmd.Env = e.gitEnv(askPass)
-
-	output, err := cmd.CombinedOutput()
 	if err != nil {
 
 		e.logger.Error(

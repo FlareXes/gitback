@@ -17,6 +17,8 @@ type MirrorEvents struct {
 	UpdateCompleted string
 	UpdateFailed    string
 
+	Retry string
+
 	FsckStarted   string
 	FsckCompleted string
 	FsckFailed    string
@@ -89,6 +91,8 @@ var Events = EventCatalog{
 		UpdateStarted:   "mirror_update_started",
 		UpdateCompleted: "mirror_update_completed",
 		UpdateFailed:    "mirror_update_failed",
+
+		Retry: "mirror_retry",
 
 		FsckStarted:   "mirror_fsck_started",
 		FsckCompleted: "mirror_fsck_completed",

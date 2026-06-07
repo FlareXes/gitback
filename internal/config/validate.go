@@ -142,6 +142,13 @@ func (c *Config) Validate() error {
 		)
 	}
 
+	if c.GitRetryAttempts < 1 {
+		issues = append(
+			issues,
+			"git_retry_attempts must be >= 1",
+		)
+	}
+
 	if len(issues) == 0 {
 		return nil
 	}

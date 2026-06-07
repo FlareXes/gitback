@@ -40,6 +40,8 @@ type Config struct {
 	CooldownMaxSeconds int `mapstructure:"cooldown_max_seconds"`
 
 	MinimumFreeDiskPercent int `mapstructure:"minimum_free_disk_percent"`
+
+	GitRetryAttempts int `mapstructure:"retry_attempts"`
 }
 
 func Default() Config {
@@ -126,6 +128,8 @@ func Default() Config {
 		CooldownMaxSeconds: 5,
 
 		MinimumFreeDiskPercent: 20,
+
+		GitRetryAttempts: 3,
 	}
 }
 
@@ -190,6 +194,8 @@ cooldown_min_seconds: %d
 cooldown_max_seconds: %d
 
 minimum_free_disk_percent: %d
+
+git_retry_attempts: %d
 `,
 		cfg.TokenFile,
 
@@ -215,6 +221,8 @@ minimum_free_disk_percent: %d
 		cfg.CooldownMaxSeconds,
 
 		cfg.MinimumFreeDiskPercent,
+
+		cfg.GitRetryAttempts,
 	)
 
 	return os.WriteFile(
