@@ -1,9 +1,9 @@
 BINARY=gitback
-RELEASE_DIR := /tmp/gitback-release
+RELEASE_DIR := /tmp/gitback/gitback-release
 
 
 build:
-	go build -o ./tmp/$(BINARY) ./cmd/gitback
+	go build -o /tmp/gitback/$(BINARY) ./cmd/gitback
 
 run:
 	go run ./cmd/gitback
@@ -12,7 +12,7 @@ test:
 	go test ./...
 
 clean:
-	rm -f ./tmp/$(BINARY)
+	rm -f /tmp/gitback/$(BINARY)
 
 release:
 	@mkdir -p $(RELEASE_DIR)
