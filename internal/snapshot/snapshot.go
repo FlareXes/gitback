@@ -94,6 +94,16 @@ func (e *Engine) Create(ctx context.Context, headless bool) error {
 		time.Since(start),
 	)
 
+	// Apply retention policy.
+	if err := ApplyRetention(e.cfg, e.logger); err != nil {
+
+		e.logger.Error(
+			logging.Events.Snapshot.RetentionFailed,
+			"",
+			err,
+		)
+	}
+
 	return nil
 }
 

@@ -34,6 +34,11 @@ type SnapshotEvents struct {
 	VerificationStarted string
 	VerificationPassed  string
 	VerificationFailed  string
+
+	RetentionDisabled  string
+	RetentionStarted   string
+	RetentionCompleted string
+	RetentionFailed    string
 }
 
 type LockEvents struct {
@@ -115,6 +120,11 @@ var Events = EventCatalog{
 		VerificationStarted: "snapshot_verification_started",
 		VerificationPassed:  "snapshot_verification_passed",
 		VerificationFailed:  "snapshot_verification_failed",
+
+		RetentionDisabled:  "snapshot_retention_disabled",
+		RetentionStarted:   "snapshot_retention_started",
+		RetentionCompleted: "snapshot_retention_completed",
+		RetentionFailed:    "snapshot_retention_failed",
 	},
 
 	Lock: LockEvents{

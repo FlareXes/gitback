@@ -42,6 +42,8 @@ type Config struct {
 	MinimumFreeDiskPercent int `mapstructure:"minimum_free_disk_percent"`
 
 	GitRetryAttempts int `mapstructure:"retry_attempts"`
+
+	SnapshotRetention int `mapstructure:"snapshot_retention"`
 }
 
 func Default() Config {
@@ -130,6 +132,8 @@ func Default() Config {
 		MinimumFreeDiskPercent: 20,
 
 		GitRetryAttempts: 3,
+
+		SnapshotRetention: 0, // if <= 0: disabled
 	}
 }
 
@@ -196,6 +200,8 @@ cooldown_max_seconds: %d
 minimum_free_disk_percent: %d
 
 git_retry_attempts: %d
+
+snapshot_retention: %d
 `,
 		cfg.TokenFile,
 
@@ -223,6 +229,8 @@ git_retry_attempts: %d
 		cfg.MinimumFreeDiskPercent,
 
 		cfg.GitRetryAttempts,
+
+		cfg.SnapshotRetention,
 	)
 
 	return os.WriteFile(
