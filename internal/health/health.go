@@ -1,12 +1,11 @@
-// internal/health/health.go
-
 package health
 
 import (
-	"fmt"
 	"os"
-	"path/filepath"
+	"sort"
+	"strings"
 	"syscall"
+	"time"
 
 	"github.com/flarexes/gitback/internal/config"
 	"github.com/flarexes/gitback/internal/state"
@@ -14,156 +13,161 @@ import (
 
 func Generate(cfg *config.Config) (*HealthReport, error) {
 
-	report := &HealthReport{}
+	report := &HealthReport{
+		GeneratedAt: time.Now().
+			UTC().
+			Format(time.RFC3339),
 
-	mirrors, err := state.Load(cfg.MirrorsStateFile)
+		Status: "healthy",
 
-	if err != nil {
+		Retention: RetentionHealth{
+			Enabled: cfg.SnapshotRetention > 0,
+			Keep:    cfg.SnapshotRetention,
+		},
+	}
+
+	if err := populateRepositories(cfg, report); err != nil {
 		return nil, err
 	}
 
-	report.RepositoryCount = len(mirrors.Repositories)
-
-	report.LastSync = mirrors.SyncCompletedAt
-
-	for _, repo := range mirrors.Repositories {
-
-		if repo.LastSuccess {
-			report.HealthyCount++
-		} else {
-			report.FailedCount++
-		}
+	if err := populateSnapshots(cfg, report); err != nil {
+		return nil, err
 	}
 
-	// Snapshot information
-	entries, err := os.ReadDir(cfg.SnapshotDir)
-
-	if err == nil {
-
-		var newest string
-
-		for _, entry := range entries {
-
-			if entry.IsDir() {
-				continue
-			}
-
-			if filepath.Ext(entry.Name()) != ".zst" {
-				continue
-			}
-
-			report.SnapshotCount++
-
-			// Add snapshot size to total.
-			info, err := entry.Info()
-			if err == nil {
-				report.SnapshotBytes += uint64(info.Size())
-			}
-
-			// Snapshot filenames use:
-			//
-			// 2026-06-06T10-00-00Z.tar.zst
-			//
-			// Lexicographic sorting works because
-			// YYYY-MM-DD is naturally sortable.
-			if entry.Name() > newest {
-				newest = entry.Name()
-			}
-		}
-
-		report.LastSnapshot = newest
+	if err := populateDisk(cfg, report); err != nil {
+		return nil, err
 	}
 
-	// Disk usage.
-	var stat syscall.Statfs_t
-
-	if err := syscall.Statfs(cfg.DataDir, &stat); err == nil {
-
-		total := stat.Blocks
-		free := stat.Bavail
-
-		if total > 0 {
-
-			report.DiskFreePercent = int(
-				(free * 100) / total,
-			)
-		}
-	}
-
-	// Recommendations
-	report.buildRecommendations(cfg)
+	updateStatus(cfg, report)
 
 	return report, nil
 }
 
-func (r *HealthReport) buildRecommendations(cfg *config.Config) {
+func populateRepositories(cfg *config.Config, report *HealthReport) error {
 
-	if r.FailedCount > 0 {
+	data, err := state.Load(
+		cfg.MirrorsStateFile,
+	)
 
-		r.Recommendations = append(
-			r.Recommendations,
-			Recommendation{
-				Severity: "WARN",
-				Message: fmt.Sprintf(
-					"%d repositories failed during last sync",
-					r.FailedCount,
-				),
-			},
-		)
+	if err != nil {
+		return err
 	}
 
-	if r.SnapshotCount == 0 {
+	report.Sync.StartedAt = data.SyncStartedAt
 
-		r.Recommendations = append(
-			r.Recommendations,
-			Recommendation{
-				Severity: "WARN",
-				Message:  "no snapshots found",
-			},
-		)
+	report.Sync.CompletedAt = data.SyncCompletedAt
+
+	for _, repo := range data.Repositories {
+
+		report.Repositories.Total++
+
+		if repo.LastSuccess {
+
+			report.Repositories.Healthy++
+
+		} else {
+
+			report.Repositories.Failed++
+		}
 	}
 
-	if r.DiskFreePercent < cfg.MinimumFreeDiskPercent {
-
-		r.Recommendations = append(
-			r.Recommendations,
-			Recommendation{
-				Severity: "CRITICAL",
-				Message: fmt.Sprintf(
-					"disk free space below %d%%",
-					cfg.MinimumFreeDiskPercent,
-				),
-			},
-		)
-	}
+	return nil
 }
 
-func HumanSize(b uint64) string {
+func populateSnapshots(cfg *config.Config, report *HealthReport) error {
 
-	// Unit names in order.
-	units := []string{"B", "KB", "MB", "GB", "TB", "PB", "EB"}
+	entries, err := os.ReadDir(
+		cfg.SnapshotDir,
+	)
 
-	// Work with float64 so we can divide repeatedly.
-	size := float64(b)
-
-	// Current unit index.
-	// 0 = B
-	// 1 = KB
-	// 2 = MB
-	// ...
-	unit := 0
-
-	// Keep dividing by 1024 until the number
-	// becomes smaller than 1024.
-	for size >= 1024 && unit < len(units)-1 {
-		size /= 1024
-		unit++
+	if err != nil {
+		return err
 	}
 
-	// For bytes, don't show decimal places.
-	if unit == 0 {
-		return fmt.Sprintf("%d %s", b, units[unit])
+	var snapshots []string
+
+	for _, entry := range entries {
+
+		if entry.IsDir() {
+			continue
+		}
+
+		name := entry.Name()
+
+		if !strings.HasSuffix(
+			name,
+			".tar.zst",
+		) {
+			continue
+		}
+
+		info, err := entry.Info()
+
+		if err != nil {
+			continue
+		}
+
+		report.Snapshots.Count++
+
+		report.Snapshots.SizeBytes +=
+			info.Size()
+
+		snapshots = append(
+			snapshots,
+			name,
+		)
 	}
 
-	return fmt.Sprintf("%.1f %s", size, units[unit])
+	if len(snapshots) == 0 {
+		return nil
+	}
+
+	sort.Strings(snapshots)
+
+	report.Snapshots.Latest = snapshots[len(snapshots)-1]
+
+	return nil
+}
+
+func populateDisk(cfg *config.Config, report *HealthReport) error {
+
+	var stat syscall.Statfs_t
+
+	if err := syscall.Statfs(
+		cfg.DataDir,
+		&stat,
+	); err != nil {
+
+		return err
+	}
+
+	free := stat.Bavail * uint64(stat.Bsize)
+	total := stat.Blocks * uint64(stat.Bsize)
+
+	if total == 0 {
+		return nil
+	}
+
+	report.Disk.FreePercent =
+		int(
+			(free * 100) / total,
+		)
+
+	report.Disk.MinimumPercent =
+		cfg.MinimumFreeDiskPercent
+
+	return nil
+}
+
+func updateStatus(cfg *config.Config, report *HealthReport) {
+
+	if report.Repositories.Failed > 0 {
+		report.Status = "degraded"
+	}
+
+	if report.Disk.FreePercent <
+		cfg.MinimumFreeDiskPercent {
+
+		report.Status = "warning"
+	}
 }
