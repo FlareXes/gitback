@@ -39,6 +39,8 @@ type SnapshotEvents struct {
 	RetentionStarted   string
 	RetentionCompleted string
 	RetentionFailed    string
+
+	CollisionDetected string
 }
 
 type LockEvents struct {
@@ -125,6 +127,8 @@ var Events = EventCatalog{
 		RetentionStarted:   "snapshot_retention_started",
 		RetentionCompleted: "snapshot_retention_completed",
 		RetentionFailed:    "snapshot_retention_failed",
+
+		CollisionDetected: "snapshot_collision_detected",
 	},
 
 	Lock: LockEvents{

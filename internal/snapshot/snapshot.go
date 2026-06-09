@@ -67,32 +67,51 @@ func (e *Engine) Create(ctx context.Context, headless bool) error {
 	archiveFile := tarFile + ".zst"
 	checksumFile := archiveFile + ".sha256"
 
+	// check if tarFile already exists to avoid collision
+	if _, err := os.Stat(tarFile); err == nil {
+
+		err_msg := fmt.Errorf("temporary archive already exists: %s", tarFile)
+
+		e.logger.Error(
+			logging.Events.Snapshot.CollisionDetected,
+			"",
+			err_msg,
+		)
+
+		return err_msg
+	}
+
+	// check if archiveFile already exists to avoid collision
+	if _, err := os.Stat(archiveFile); err == nil {
+
+		err_msg := fmt.Errorf("snapshot already exists: %s", archiveFile)
+
+		e.logger.Error(
+			logging.Events.Snapshot.CollisionDetected,
+			"",
+			err_msg,
+		)
+
+		return err_msg
+	}
+
 	// Create tar archive.
 	if err := e.createTar(ctx, tarFile); err != nil {
-
 		return err
 	}
 
+	// Always cleanup temporary tar file.
+	defer os.Remove(tarFile)
+
 	// Compress archive.
 	if err := e.compress(ctx, tarFile); err != nil {
-
 		return err
 	}
 
 	// Generate checksum.
 	if err := e.sha256(archiveFile, checksumFile); err != nil {
-
 		return err
 	}
-
-	// Remove uncompressed tar.
-	_ = os.Remove(tarFile)
-
-	e.logger.Duration(
-		logging.Events.Snapshot.Completed,
-		"",
-		time.Since(start),
-	)
 
 	// Apply retention policy.
 	if err := ApplyRetention(e.cfg, e.logger); err != nil {
@@ -103,6 +122,12 @@ func (e *Engine) Create(ctx context.Context, headless bool) error {
 			err,
 		)
 	}
+
+	e.logger.Duration(
+		logging.Events.Snapshot.Completed,
+		"",
+		time.Since(start),
+	)
 
 	return nil
 }
