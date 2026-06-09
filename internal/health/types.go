@@ -12,6 +12,9 @@ type HealthReport struct {
 	Disk         DiskHealth       `json:"disk"`
 	Sync         SyncHealth       `json:"sync"`
 	Retention    RetentionHealth  `json:"retention"`
+
+	Warnings        []string `json:"warnings,omitempty"`
+	Recommendations []string `json:"recommendations,omitempty"`
 }
 
 type RepositoryHealth struct {
@@ -21,14 +24,15 @@ type RepositoryHealth struct {
 }
 
 type SnapshotHealth struct {
-	Count     int    `json:"count"`
-	SizeBytes int64  `json:"size_bytes"`
-	Latest    string `json:"latest,omitempty"`
+	Count  int    `json:"count"`
+	Size   string `json:"size"`
+	Latest string `json:"latest,omitempty"`
 }
 
 type DiskHealth struct {
-	FreePercent    int `json:"free_percent"`
-	MinimumPercent int `json:"minimum_percent"`
+	FreePercent    int    `json:"free_percent"`
+	MinimumPercent int    `json:"minimum_percent"`
+	Free           string `json:"free"`
 }
 
 type SyncHealth struct {

@@ -1,6 +1,7 @@
 package health
 
 import (
+	"fmt"
 	"os"
 	"sort"
 	"strings"
@@ -37,6 +38,16 @@ func Generate(cfg *config.Config) (*HealthReport, error) {
 	if err := populateDisk(cfg, report); err != nil {
 		return nil, err
 	}
+
+	populateWarnings(
+		cfg,
+		report,
+	)
+
+	populateRecommendations(
+		cfg,
+		report,
+	)
 
 	updateStatus(cfg, report)
 
@@ -85,6 +96,7 @@ func populateSnapshots(cfg *config.Config, report *HealthReport) error {
 	}
 
 	var snapshots []string
+	var totalSize int64
 
 	for _, entry := range entries {
 
@@ -109,8 +121,7 @@ func populateSnapshots(cfg *config.Config, report *HealthReport) error {
 
 		report.Snapshots.Count++
 
-		report.Snapshots.SizeBytes +=
-			info.Size()
+		totalSize += info.Size()
 
 		snapshots = append(
 			snapshots,
@@ -121,6 +132,8 @@ func populateSnapshots(cfg *config.Config, report *HealthReport) error {
 	if len(snapshots) == 0 {
 		return nil
 	}
+
+	report.Snapshots.Size = humanSize(totalSize)
 
 	sort.Strings(snapshots)
 
@@ -153,6 +166,11 @@ func populateDisk(cfg *config.Config, report *HealthReport) error {
 			(free * 100) / total,
 		)
 
+	report.Disk.Free =
+		humanSize(
+			int64(free),
+		)
+
 	report.Disk.MinimumPercent =
 		cfg.MinimumFreeDiskPercent
 
@@ -170,4 +188,92 @@ func updateStatus(cfg *config.Config, report *HealthReport) {
 
 		report.Status = "warning"
 	}
+}
+
+func populateWarnings(cfg *config.Config, report *HealthReport) {
+
+	if report.Repositories.Failed > 0 {
+
+		report.Warnings = append(
+			report.Warnings,
+			fmt.Sprintf(
+				"%d repositories unhealthy",
+				report.Repositories.Failed,
+			),
+		)
+	}
+
+	if report.Disk.FreePercent <
+		cfg.MinimumFreeDiskPercent {
+
+		report.Warnings = append(
+			report.Warnings,
+			"disk space below configured threshold",
+		)
+	}
+
+	if cfg.SnapshotRetention == 1 {
+
+		report.Warnings = append(
+			report.Warnings,
+			"only one snapshot retained",
+		)
+	}
+}
+
+func populateRecommendations(cfg *config.Config, report *HealthReport) {
+
+	if report.Repositories.Failed > 0 {
+
+		report.Recommendations = append(
+			report.Recommendations,
+			"run gitback sync and inspect failed repositories under logs",
+		)
+	}
+
+	if report.Disk.FreePercent < cfg.MinimumFreeDiskPercent {
+
+		report.Recommendations = append(
+			report.Recommendations,
+			"consider increasing available storage",
+		)
+	}
+
+	if report.Snapshots.Count == 0 {
+
+		report.Recommendations = append(
+			report.Recommendations,
+			"consider creating a snapshot",
+		)
+	}
+}
+
+func humanSize(b int64) string {
+
+	// Unit names in order.
+	units := []string{"B", "KB", "MB", "GB", "TB", "PB", "EB"}
+
+	// Work with float64 so we can divide repeatedly.
+	size := float64(b)
+
+	// Current unit index.
+	// 0 = B
+	// 1 = KB
+	// 2 = MB
+	// ...
+	unit := 0
+
+	// Keep dividing by 1024 until the number
+	// becomes smaller than 1024.
+	for size >= 1024 && unit < len(units)-1 {
+		size /= 1024
+		unit++
+	}
+
+	// For bytes, don't show decimal places.
+	if unit == 0 {
+		return fmt.Sprintf("%d %s", b, units[unit])
+	}
+
+	return fmt.Sprintf("%.1f %s", size, units[unit])
 }
