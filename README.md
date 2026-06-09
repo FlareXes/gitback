@@ -6,7 +6,7 @@ GitBack discovers repositories from GitHub, maintains local mirrors, and creates
 
 ## Features
 
-- Backup Public and private GitHub repository (`can't choose one, for now`)
+- Backup Public and private GitHub repository
     
 - Local Git mirror synchronization
     
@@ -209,6 +209,16 @@ Each snapshot includes:
 mirrors/
 state/mirrors.json
 ```
+
+Snapshot retention can be configured to automatically remove older snapshots.
+
+Example:
+
+```yaml
+snapshot_retention: 30
+```
+
+Retains the newest 30 snapshots. Retention is disabled by default (`0 or < 1`).
 
 GitBack also generates SHA256 checksum files alongside snapshots.
 
