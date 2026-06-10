@@ -12,7 +12,7 @@ import (
 	"github.com/spf13/cobra"
 )
 
-var snapshotHeadless bool
+var snapshotForce bool
 
 var snapshotCmd = &cobra.Command{
 	Use:   "snapshot",
@@ -54,7 +54,7 @@ var snapshotCmd = &cobra.Command{
 
 		engine := snapshot.New(cfg, logger)
 
-		if err := engine.Create(context.Background(), snapshotHeadless); err != nil {
+		if err := engine.Create(context.Background(), snapshotForce); err != nil {
 
 			logger.Error(
 				logging.Events.Snapshot.Failed,
@@ -72,9 +72,9 @@ var snapshotCmd = &cobra.Command{
 func init() {
 
 	snapshotCmd.Flags().BoolVar(
-		&snapshotHeadless,
-		"headless",
+		&snapshotForce,
+		"force",
 		false,
-		"continue snapshot creation even if integrity check fails",
+		"continue snapshot creation when repository/mirror health checks fail",
 	)
 }

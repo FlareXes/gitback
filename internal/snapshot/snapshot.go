@@ -10,6 +10,7 @@ import (
 	"os"
 	"os/exec"
 	"path/filepath"
+	"strings"
 	"time"
 
 	"github.com/flarexes/gitback/internal/config"
@@ -29,7 +30,7 @@ func New(cfg *config.Config, logger *logging.Logger) *Engine {
 	}
 }
 
-func (e *Engine) Create(ctx context.Context, headless bool) error {
+func (e *Engine) Create(ctx context.Context, force bool) error {
 
 	start := time.Now()
 
@@ -49,14 +50,14 @@ func (e *Engine) Create(ctx context.Context, headless bool) error {
 			err,
 		)
 
-		if !headless {
+		if !force {
 			return err
 		}
 
 		e.logger.Warn(
 			logging.Events.Snapshot.VerificationFailed,
 			"",
-			"headless mode enabled, continuing snapshot",
+			"snapshot --force mode enabled, continuing snapshot",
 		)
 	}
 
@@ -128,6 +129,9 @@ func (e *Engine) Create(ctx context.Context, headless bool) error {
 		)
 	}
 
+	fmt.Println()
+	fmt.Println("Snapshot saved at " + archiveFile)
+
 	e.logger.Duration(
 		logging.Events.Snapshot.Completed,
 		"",
@@ -188,10 +192,34 @@ func (e *Engine) verifyMirrors() error {
 
 	if len(failed) > 0 {
 
-		return fmt.Errorf(
-			"mirror verification failed: %d repositories unhealthy",
-			len(failed),
+		var builder strings.Builder
+
+		builder.WriteString(
+			"mirror verification failed\n\n",
 		)
+
+		builder.WriteString(
+			"Failed repositories:\n",
+		)
+
+		for _, repo := range failed {
+
+			fmt.Fprintf(
+				&builder,
+				" - %s\n",
+				repo,
+			)
+		}
+
+		builder.WriteString(
+			"\nRun:\n  gitback sync\n",
+		)
+
+		builder.WriteString(
+			"\nOr create a snapshot anyway:\n  gitback snapshot --force",
+		)
+
+		return fmt.Errorf("%s", builder.String())
 	}
 
 	e.logger.Info(
