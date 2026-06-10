@@ -39,7 +39,8 @@ func (e *Engine) Create(ctx context.Context, headless bool) error {
 		return err
 	}
 
-	// Verify mirror state.
+	// Verify mirror state
+	fmt.Println("[1/5] Verifying mirrors")
 	if err := e.verifyMirrors(); err != nil {
 
 		e.logger.Error(
@@ -96,6 +97,7 @@ func (e *Engine) Create(ctx context.Context, headless bool) error {
 	}
 
 	// Create tar archive.
+	fmt.Println("[2/5] Creating archive")
 	if err := e.createTar(ctx, tarFile); err != nil {
 		return err
 	}
@@ -104,16 +106,19 @@ func (e *Engine) Create(ctx context.Context, headless bool) error {
 	defer os.Remove(tarFile)
 
 	// Compress archive.
+	fmt.Println("[3/5] Compressing archive")
 	if err := e.compress(ctx, tarFile); err != nil {
 		return err
 	}
 
 	// Generate checksum.
+	fmt.Println("[4/5] Generating checksum")
 	if err := e.sha256(archiveFile, checksumFile); err != nil {
 		return err
 	}
 
 	// Apply retention policy.
+	fmt.Println("[5/5] Applying retention policy")
 	if err := ApplyRetention(e.cfg, e.logger); err != nil {
 
 		e.logger.Error(

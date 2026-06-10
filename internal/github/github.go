@@ -58,6 +58,8 @@ func (c *Client) Discover(ctx context.Context) error {
 	// GitHub pagination: GitHub only returns a limited number of repos per request.
 	for {
 
+		fmt.Printf("Fetching repositories (page %d)\n", opt.Page+1)
+
 		repos, resp, err := c.api.Repositories.ListByAuthenticatedUser(
 			ctx,
 			opt,
@@ -80,7 +82,7 @@ func (c *Client) Discover(ctx context.Context) error {
 			)
 		}
 
-		// No more pages.
+		// No more pages
 		if resp.NextPage == 0 {
 			break
 		}
@@ -120,6 +122,9 @@ func (c *Client) Discover(ctx context.Context) error {
 			)
 		}
 	}
+
+	// Print total number of repositories discovered
+	fmt.Printf("Discovered %d repositories\n", len(all))
 
 	c.logger.Emit(
 		logging.Entry{

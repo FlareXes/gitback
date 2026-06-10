@@ -7,8 +7,10 @@ import (
 )
 
 var rootCmd = &cobra.Command{
-	Use:   "gitback",
-	Short: "GitHub Backup Utility",
+	Use:          "gitback",
+	Short:        "GitHub Backup Utility",
+	SilenceUsage: true,
+	SilenceErrors: true,
 }
 
 func Execute() error {

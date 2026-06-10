@@ -3,6 +3,7 @@
 package config
 
 import (
+	"errors"
 	"fmt"
 	"os"
 	"path/filepath"
@@ -151,6 +152,14 @@ func Load() (*Config, error) {
 	v.AutomaticEnv()
 
 	if err := v.ReadInConfig(); err != nil {
+
+		var notFound viper.ConfigFileNotFoundError
+
+		if errors.As(err, &notFound) {
+
+			return nil, fmt.Errorf("gitback is not initialized\n\nRun: gitback init")
+		}
+
 		return nil, err
 	}
 

@@ -109,6 +109,8 @@ func (e *Engine) Sync(ctx context.Context) error {
 			continue
 		}
 
+		fmt.Printf("[SYNC] %s\n", e.extractRepoName(repo))
+
 		if err := e.syncRepository(ctx, repo); err != nil {
 
 			e.logger.Error(
@@ -187,7 +189,6 @@ func (e *Engine) cloneMirror(ctx context.Context, repo string, target string) er
 
 	defer os.Remove(askPass)
 
-	// output, err := cmd.CombinedOutput()
 	output, err := e.runGit(
 		ctx,
 		repoName,
@@ -315,5 +316,25 @@ func (e *Engine) cooldown() {
 
 	time.Sleep(
 		time.Duration(seconds) * time.Second,
+	)
+}
+
+func (e *Engine) extractRepoName(repoURL string) string {
+
+	repo := strings.TrimSuffix(
+		repoURL,
+		".git",
+	)
+
+	parts := strings.Split(repo, "/")
+
+	if len(parts) < 2 {
+		return repo
+	}
+
+	return fmt.Sprintf(
+		"%s/%s",
+		parts[len(parts)-2],
+		parts[len(parts)-1],
 	)
 }

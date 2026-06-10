@@ -5,7 +5,6 @@ package cmd
 import (
 	"context"
 	"fmt"
-	"os"
 
 	"github.com/flarexes/gitback/internal/config"
 	"github.com/flarexes/gitback/internal/github"
@@ -48,16 +47,11 @@ var discoverCmd = &cobra.Command{
 				err,
 			)
 
-			fmt.Fprintf(
-				os.Stderr,
-				"Repository discovery failed: %v\n",
+			return fmt.Errorf(
+				"repository discovery failed: %w",
 				err,
 			)
-
-			return err
 		}
-
-		fmt.Println("Repository discovery completed successfully")
 
 		return nil
 	},
