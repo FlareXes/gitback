@@ -149,13 +149,6 @@ func (c *Config) Validate() error {
 		)
 	}
 
-	if c.SnapshotRetention != int(c.SnapshotRetention) {
-		issues = append(
-			issues,
-			"snapshot_retention must be an integer",
-		)
-	}
-
 	if len(issues) == 0 {
 		return nil
 	}
