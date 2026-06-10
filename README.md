@@ -20,8 +20,6 @@ GitBack discovers repositories from GitHub, maintains local mirrors, and creates
     
 - Environment diagnostics
     
-- Headless automation support (`need improvements`)
-    
 - No database
     
 - No daemon
@@ -98,13 +96,13 @@ gitback snapshot
 
 Creates a compressed archive containing all mirrored repositories.
 
-Headless mode:
+Force mode:
 
 ```bash
-gitback snapshot --headless
+gitback snapshot --force
 ```
 
-Continues snapshot creation even if repository verification reports failures.
+Continues snapshot creation even if repository sync was failed.
 
 ### Health
 
@@ -229,7 +227,7 @@ Typical unattended workflow:
 ```bash
 gitback discover
 gitback sync
-gitback snapshot --headless
+gitback snapshot --force
 ```
 
 Can be scheduled using:
