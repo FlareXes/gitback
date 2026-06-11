@@ -108,31 +108,6 @@ func (c *Config) Validate() error {
 		)
 	}
 
-	if c.CooldownMinSeconds < 0 {
-
-		issues = append(
-			issues,
-			"cooldown_min_seconds must be >= 0",
-		)
-	}
-
-	if c.CooldownMaxSeconds < 0 {
-
-		issues = append(
-			issues,
-			"cooldown_max_seconds must be >= 0",
-		)
-	}
-
-	if c.CooldownMaxSeconds <
-		c.CooldownMinSeconds {
-
-		issues = append(
-			issues,
-			"cooldown_max_seconds must be >= cooldown_min_seconds",
-		)
-	}
-
 	if c.MinimumFreeDiskPercent < 0 ||
 		c.MinimumFreeDiskPercent > 100 {
 

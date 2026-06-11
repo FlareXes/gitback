@@ -6,7 +6,6 @@ import (
 	"bufio"
 	"context"
 	"fmt"
-	"math/rand"
 	"os"
 	"os/exec"
 	"path/filepath"
@@ -132,8 +131,6 @@ func (e *Engine) Sync(ctx context.Context) error {
 			Name:        repo,
 			LastSuccess: true,
 		})
-
-		e.cooldown()
 	}
 
 	// Time Sync
@@ -300,23 +297,6 @@ func (e *Engine) updateMirror(ctx context.Context, target string) error {
 	)
 
 	return nil
-}
-
-func (e *Engine) cooldown() {
-
-	min := e.cfg.CooldownMinSeconds
-	max := e.cfg.CooldownMaxSeconds
-
-	seconds := rand.Intn(max-min+1) + min
-
-	e.logger.Info(
-		logging.Events.Cooldown.Started,
-		"",
-	)
-
-	time.Sleep(
-		time.Duration(seconds) * time.Second,
-	)
 }
 
 func (e *Engine) extractRepoName(repoURL string) string {

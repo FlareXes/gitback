@@ -37,9 +37,6 @@ type Config struct {
 	RepoInventory string `mapstructure:"repo_inventory"`
 	LockFile      string `mapstructure:"lock_file"`
 
-	CooldownMinSeconds int `mapstructure:"cooldown_min_seconds"`
-	CooldownMaxSeconds int `mapstructure:"cooldown_max_seconds"`
-
 	MinimumFreeDiskPercent int `mapstructure:"minimum_free_disk_percent"`
 
 	GitRetryAttempts int `mapstructure:"retry_attempts"`
@@ -127,9 +124,6 @@ func Default() Config {
 
 		LockFile: "/tmp/gitback.lock",
 
-		CooldownMinSeconds: 0,
-		CooldownMaxSeconds: 5,
-
 		MinimumFreeDiskPercent: 20,
 
 		GitRetryAttempts: 3,
@@ -203,9 +197,6 @@ temp_dir: %s
 repo_inventory: %s
 lock_file: %s
 
-cooldown_min_seconds: %d
-cooldown_max_seconds: %d
-
 minimum_free_disk_percent: %d
 
 git_retry_attempts: %d
@@ -231,9 +222,6 @@ snapshot_retention: %d
 
 		cfg.RepoInventory,
 		cfg.LockFile,
-
-		cfg.CooldownMinSeconds,
-		cfg.CooldownMaxSeconds,
 
 		cfg.MinimumFreeDiskPercent,
 

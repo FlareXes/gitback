@@ -68,10 +68,6 @@ type SyncEvents struct {
 	Failed    string
 }
 
-type CooldownEvents struct {
-	Started string
-}
-
 type EventCatalog struct {
 	GitHub   GitHubEvents
 	Mirror   MirrorEvents
@@ -80,7 +76,6 @@ type EventCatalog struct {
 	Health   HealthEvents
 	Restore  RestoreEvents
 	Sync     SyncEvents
-	Cooldown CooldownEvents
 }
 
 var Events = EventCatalog{
@@ -142,10 +137,6 @@ var Events = EventCatalog{
 		RepoFailure:  "health_repo_failure",
 		StaleBackup:  "health_stale_backup",
 		HealthReport: "health_report_generated",
-	},
-
-	Cooldown: CooldownEvents{
-		Started: "cooldown_started",
 	},
 
 	Restore: RestoreEvents{
