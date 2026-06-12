@@ -10,6 +10,7 @@ import (
 	"os/exec"
 	"path/filepath"
 	"strings"
+	"sync"
 	"time"
 
 	"github.com/flarexes/gitback/internal/config"
@@ -86,13 +87,103 @@ func (e *Engine) runGit(
 
 func (e *Engine) Sync(ctx context.Context) error {
 
-	// Consumed for integrity check during snapshot
+	syncStartedAt := time.Now()
+
+	repositories, err := e.syncRepositories(
+		ctx,
+	)
+
+	if err != nil {
+		return err
+	}
+
+	syncCompletedAt := time.Now()
+
+	if err := state.Save(
+		e.cfg.MirrorsStateFile,
+		syncStartedAt,
+		syncCompletedAt,
+		repositories,
+	); err != nil {
+
+		e.logger.Error(
+			logging.Events.Mirror.StateSaveFailed,
+			"",
+			err,
+		)
+	}
+
+	return nil
+}
+
+func (e *Engine) syncRepositories(ctx context.Context) ([]state.Repository, error) {
+
+	jobs := make(chan string)
+	results := make(chan state.Repository)
+
+	var wg sync.WaitGroup
+
+	e.startWorkers(
+		ctx,
+		jobs,
+		results,
+		&wg,
+	)
+
+	dispatchErr := make(chan error, 1)
+
+	go func() {
+		dispatchErr <- e.dispatchJobs(jobs)
+	}()
+
+	go func() {
+		wg.Wait()
+		close(results)
+	}()
+
 	var repositories []state.Repository
 
-	// Time Sync
-	var syncStartedAt = time.Now()
+	for result := range results {
+
+		repositories = append(
+			repositories,
+			result,
+		)
+	}
+
+	if err := <-dispatchErr; err != nil {
+		return nil, err
+	}
+
+	return repositories, nil
+}
+
+func (e *Engine) startWorkers(
+	ctx context.Context,
+	jobs <-chan string,
+	results chan<- state.Repository,
+	wg *sync.WaitGroup,
+) {
+
+	for i := 0; i < e.cfg.SyncWorkers; i++ {
+
+		wg.Add(1)
+
+		go e.worker(
+			ctx,
+			jobs,
+			results,
+			wg,
+		)
+	}
+}
+
+func (e *Engine) dispatchJobs(jobs chan<- string) error {
+
+	defer close(jobs)
 
 	file, err := os.Open(e.cfg.RepoInventory)
+
 	if err != nil {
 		return err
 	}
@@ -108,6 +199,23 @@ func (e *Engine) Sync(ctx context.Context) error {
 			continue
 		}
 
+		jobs <- repo
+	}
+
+	return scanner.Err()
+}
+
+func (e *Engine) worker(
+	ctx context.Context,
+	jobs <-chan string,
+	results chan<- state.Repository,
+	wg *sync.WaitGroup,
+) {
+
+	defer wg.Done()
+
+	for repo := range jobs {
+
 		fmt.Printf("[SYNC] %s\n", e.extractRepoName(repo))
 
 		if err := e.syncRepository(ctx, repo); err != nil {
@@ -118,40 +226,20 @@ func (e *Engine) Sync(ctx context.Context) error {
 				err,
 			)
 
-			repositories = append(repositories, state.Repository{
+			results <- state.Repository{
 				Name:        repo,
 				LastSuccess: false,
 				Error:       err.Error(),
-			})
+			}
 
 			continue
 		}
 
-		repositories = append(repositories, state.Repository{
+		results <- state.Repository{
 			Name:        repo,
 			LastSuccess: true,
-		})
+		}
 	}
-
-	// Time Sync
-	var syncCompletedAt = time.Now()
-
-	// Save mirrors metabase
-	if err := state.Save(
-		e.cfg.MirrorsStateFile,
-		syncStartedAt,
-		syncCompletedAt,
-		repositories,
-	); err != nil {
-
-		e.logger.Error(
-			logging.Events.Mirror.StateSaveFailed,
-			"",
-			err,
-		)
-	}
-
-	return scanner.Err()
 }
 
 func (e *Engine) syncRepository(ctx context.Context, repo string) error {

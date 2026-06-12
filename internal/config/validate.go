@@ -124,6 +124,13 @@ func (c *Config) Validate() error {
 		)
 	}
 
+	if c.SyncWorkers < 1 {
+		issues = append(
+			issues,
+			"sync_workers must be >= 1",
+		)
+	}
+
 	if len(issues) == 0 {
 		return nil
 	}

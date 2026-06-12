@@ -40,6 +40,7 @@ type Config struct {
 	MinimumFreeDiskPercent int `mapstructure:"minimum_free_disk_percent"`
 
 	GitRetryAttempts int `mapstructure:"retry_attempts"`
+	SyncWorkers      int `mapstructure:"sync_workers"`
 
 	SnapshotRetention int `mapstructure:"snapshot_retention"`
 }
@@ -127,6 +128,7 @@ func Default() Config {
 		MinimumFreeDiskPercent: 20,
 
 		GitRetryAttempts: 3,
+		SyncWorkers:      3,
 
 		SnapshotRetention: 0, // if <= 0: disabled
 	}
@@ -200,6 +202,7 @@ lock_file: %s
 minimum_free_disk_percent: %d
 
 git_retry_attempts: %d
+sync_workers: %d
 
 snapshot_retention: %d
 `,
@@ -226,6 +229,7 @@ snapshot_retention: %d
 		cfg.MinimumFreeDiskPercent,
 
 		cfg.GitRetryAttempts,
+		cfg.SyncWorkers,
 
 		cfg.SnapshotRetention,
 	)
