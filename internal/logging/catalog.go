@@ -6,6 +6,8 @@ type GitHubEvents struct {
 	DiscoveryStarted   string
 	DiscoveryCompleted string
 	DiscoveryFailed    string
+
+	RateLimit string
 }
 
 type MirrorEvents struct {
@@ -80,9 +82,11 @@ type EventCatalog struct {
 
 var Events = EventCatalog{
 	GitHub: GitHubEvents{
-		DiscoveryStarted:   "repo_discovery_started",
-		DiscoveryCompleted: "repo_discovery_completed",
-		DiscoveryFailed:    "repo_discovery_failed",
+		DiscoveryStarted:   "discovery_started",
+		DiscoveryCompleted: "discovery_completed",
+		DiscoveryFailed:    "discovery_failed",
+
+		RateLimit: "github_rate_limit",
 	},
 
 	Mirror: MirrorEvents{

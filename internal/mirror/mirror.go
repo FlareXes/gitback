@@ -97,7 +97,12 @@ func (e *Engine) Sync(ctx context.Context) error {
 		return err
 	}
 
-	var gists []state.Asset
+	// Gists
+	gists, err := e.syncGists(ctx)
+
+	if err != nil {
+		return err
+	}
 
 	syncCompletedAt := time.Now()
 
@@ -159,6 +164,75 @@ func (e *Engine) syncRepositories(ctx context.Context) ([]state.Asset, error) {
 	}
 
 	return repositories, nil
+}
+
+func (e *Engine) syncGists(ctx context.Context) ([]state.Asset, error) {
+
+	file, err := os.Open(e.cfg.GistInventoryFile())
+
+	if os.IsNotExist(err) {
+
+		return nil, nil
+	}
+
+	if err != nil {
+		return nil, err
+	}
+
+	defer file.Close()
+
+	var gists []state.Asset
+
+	scanner := bufio.NewScanner(file)
+
+	for scanner.Scan() {
+
+		gist := strings.TrimSpace(
+			scanner.Text(),
+		)
+
+		if gist == "" {
+			continue
+		}
+
+		fmt.Printf("[GIST] %s\n", filepath.Base(gist))
+
+		if err := e.syncGist(ctx, gist); err != nil {
+
+			gists = append(
+				gists,
+				state.Asset{
+					Name:        gist,
+					LastSuccess: false,
+					Error:       err.Error(),
+				},
+			)
+
+			continue
+		}
+
+		gists = append(
+			gists,
+			state.Asset{
+				Name:        gist,
+				LastSuccess: true,
+			},
+		)
+	}
+
+	return gists, scanner.Err()
+}
+
+func (e *Engine) syncGist(ctx context.Context, gist string) error {
+
+	gistID := strings.TrimSuffix(filepath.Base(gist), ".git")
+	target := filepath.Join(e.cfg.GistMirrorDir(), gistID+".git")
+
+	if _, err := os.Stat(target); os.IsNotExist(err) {
+		return e.cloneMirror(ctx, gist, target)
+	}
+
+	return e.updateMirror(ctx, target)
 }
 
 func (e *Engine) startWorkers(

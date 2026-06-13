@@ -42,6 +42,8 @@ type Config struct {
 	SyncWorkers      int `mapstructure:"sync_workers"`
 
 	SnapshotRetention int `mapstructure:"snapshot_retention"`
+
+	BackupGists bool `mapstructure:"backup_gists"`
 }
 
 func Default() Config {
@@ -124,6 +126,8 @@ func Default() Config {
 		SyncWorkers:      3,
 
 		SnapshotRetention: 0, // if <= 0: disabled
+
+		BackupGists: true,
 	}
 }
 
@@ -198,6 +202,8 @@ git_retry_attempts: %d
 sync_workers: %d
 
 snapshot_retention: %d
+
+backup_gists: %t
 `,
 		cfg.TokenFile,
 
@@ -224,6 +230,8 @@ snapshot_retention: %d
 		cfg.SyncWorkers,
 
 		cfg.SnapshotRetention,
+
+		cfg.BackupGists,
 	)
 
 	return os.WriteFile(
