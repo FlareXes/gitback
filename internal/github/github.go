@@ -60,7 +60,7 @@ func (c *Client) discoverRepositories(ctx context.Context) (DiscoverResult, erro
 
 	for {
 
-		fmt.Printf("Fetching repositories (page %d)\n", opt.Page+1)
+		fmt.Printf("Fetching repositories  (page %d)\n", opt.Page+1)
 
 		repos, resp, err := c.api.Repositories.ListByAuthenticatedUser(
 			ctx,
@@ -112,7 +112,7 @@ func (c *Client) discoverGists(ctx context.Context) (DiscoverResult, error) {
 
 	for {
 
-		fmt.Printf("Fetching gists (page %d)\n", opt.Page+1)
+		fmt.Printf("Fetching gists         (page %d)\n", opt.Page+1)
 
 		gists, resp, err := c.api.Gists.List(
 			ctx,
@@ -191,6 +191,8 @@ func (c *Client) Discover(ctx context.Context) error {
 		return err
 	}
 
+	repoCount := len(result.Items)
+
 	if err := writeInventory(
 		c.cfg.RepositoryInventoryFile(),
 		result.Items,
@@ -207,7 +209,7 @@ func (c *Client) Discover(ctx context.Context) error {
 
 			Details: map[string]any{
 				"resource":   "repositories",
-				"repo_count": len(result.Items),
+				"repo_count": repoCount,
 			},
 		},
 	)
@@ -231,55 +233,56 @@ func (c *Client) Discover(ctx context.Context) error {
 
 	if c.cfg.BackupGists {
 
-		gists, err := c.discoverGists(ctx)
+		result, err := c.discoverGists(ctx)
 
 		if err != nil {
 			return err
 		}
 
+		gistCount = len(result.Items)
+
 		if err := writeInventory(
 			c.cfg.GistInventoryFile(),
-			gists.Items,
+			result.Items,
 		); err != nil {
 
 			return err
 		}
 
-		gistCount = len(gists.Items)
+		// Log gist completion
+		c.logger.Emit(
+			logging.Entry{
+				Level: logging.Info,
+				Event: logging.Events.GitHub.DiscoveryCompleted,
+
+				Details: map[string]any{
+					"resource":   "gists",
+					"gist_count": gistCount,
+				},
+			},
+		)
+
+		// Log remaining API quota
+		c.logger.Emit(
+			logging.Entry{
+				Level: logging.Info,
+				Event: logging.Events.GitHub.RateLimit,
+
+				Details: map[string]any{
+					"resource":  "gists",
+					"limit":     result.RateLimit.Limit,
+					"remaining": result.RateLimit.Remaining,
+				},
+			},
+		)
 	}
 
-	fmt.Printf(
-		"Discovered %d repositories and %d gists\n",
-		len(result.Items),
-		gistCount,
-	)
+	fmt.Println()
+	fmt.Println("Repository: ", repoCount)
 
-	// Log gist completion
-	c.logger.Emit(
-		logging.Entry{
-			Level: logging.Info,
-			Event: logging.Events.GitHub.DiscoveryCompleted,
-
-			Details: map[string]any{
-				"resource":   "gists",
-				"gist_count": gistCount,
-			},
-		},
-	)
-
-	// Log remaining API quota
-	c.logger.Emit(
-		logging.Entry{
-			Level: logging.Info,
-			Event: logging.Events.GitHub.RateLimit,
-
-			Details: map[string]any{
-				"resource":  "gists",
-				"limit":     result.RateLimit.Limit,
-				"remaining": result.RateLimit.Remaining,
-			},
-		},
-	)
+	if c.cfg.BackupGists {
+		fmt.Println("Gist:       ", gistCount)
+	}
 
 	return nil
 }
