@@ -27,7 +27,7 @@ func Generate(cfg *config.Config) (*HealthReport, error) {
 		},
 	}
 
-	if err := populateRepositories(cfg, report); err != nil {
+	if err := populateAssets(cfg, report); err != nil {
 		return nil, err
 	}
 
@@ -54,7 +54,7 @@ func Generate(cfg *config.Config) (*HealthReport, error) {
 	return report, nil
 }
 
-func populateRepositories(cfg *config.Config, report *HealthReport) error {
+func populateAssets(cfg *config.Config, report *HealthReport) error {
 
 	data, err := state.Load(
 		cfg.MirrorsStateFile,
@@ -90,6 +90,20 @@ func populateRepositories(cfg *config.Config, report *HealthReport) error {
 		} else {
 
 			report.Repositories.Failed++
+		}
+	}
+
+	for _, gist := range data.Gists {
+
+		report.Gists.Total++
+
+		if gist.LastSuccess {
+
+			report.Gists.Healthy++
+
+		} else {
+
+			report.Gists.Failed++
 		}
 	}
 
@@ -192,7 +206,7 @@ func updateStatus(cfg *config.Config, report *HealthReport) {
 
 	report.Status = "healthy"
 
-	if report.Repositories.Failed > 0 {
+	if report.Repositories.Failed > 0 || report.Gists.Failed > 0 {
 
 		report.Status = "warning"
 	}
@@ -206,13 +220,15 @@ func updateStatus(cfg *config.Config, report *HealthReport) {
 
 func populateWarnings(cfg *config.Config, report *HealthReport) {
 
-	if report.Repositories.Failed > 0 {
+	failedAssets := report.Repositories.Failed + report.Gists.Failed
+
+	if failedAssets > 0 {
 
 		report.Warnings = append(
 			report.Warnings,
 			fmt.Sprintf(
-				"%d repositories unhealthy",
-				report.Repositories.Failed,
+				"%d assets unhealthy",
+				failedAssets,
 			),
 		)
 	}
@@ -237,7 +253,7 @@ func populateWarnings(cfg *config.Config, report *HealthReport) {
 
 func populateRecommendations(cfg *config.Config, report *HealthReport) {
 
-	if report.Repositories.Failed > 0 {
+	if report.Repositories.Failed > 0 || report.Gists.Failed > 0 {
 
 		report.Recommendations = append(
 			report.Recommendations,
