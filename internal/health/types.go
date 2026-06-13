@@ -7,17 +7,17 @@ type HealthReport struct {
 
 	Status string `json:"status"`
 
-	Repositories RepositoryHealth `json:"repositories"`
-	Snapshots    SnapshotHealth   `json:"snapshots"`
-	Disk         DiskHealth       `json:"disk"`
-	Sync         SyncHealth       `json:"sync"`
-	Retention    RetentionHealth  `json:"retention"`
+	Repositories AssetHealth     `json:"repositories"`
+	Snapshots    SnapshotHealth  `json:"snapshots"`
+	Disk         DiskHealth      `json:"disk"`
+	Sync         SyncHealth      `json:"sync"`
+	Retention    RetentionHealth `json:"retention"`
 
 	Warnings        []string `json:"warnings,omitempty"`
 	Recommendations []string `json:"recommendations,omitempty"`
 }
 
-type RepositoryHealth struct {
+type AssetHealth struct {
 	Total   int `json:"total"`
 	Healthy int `json:"healthy"`
 	Failed  int `json:"failed"`

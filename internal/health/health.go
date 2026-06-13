@@ -61,7 +61,18 @@ func populateRepositories(cfg *config.Config, report *HealthReport) error {
 	)
 
 	if err != nil {
-		return err
+
+		report.Warnings = append(
+			report.Warnings,
+			"mirror state unavailable",
+		)
+
+		report.Recommendations = append(
+			report.Recommendations,
+			"run gitback sync",
+		)
+
+		return nil
 	}
 
 	report.Sync.StartedAt = data.SyncStartedAt
@@ -179,14 +190,17 @@ func populateDisk(cfg *config.Config, report *HealthReport) error {
 
 func updateStatus(cfg *config.Config, report *HealthReport) {
 
+	report.Status = "healthy"
+
 	if report.Repositories.Failed > 0 {
-		report.Status = "degraded"
+
+		report.Status = "warning"
 	}
 
 	if report.Disk.FreePercent <
 		cfg.MinimumFreeDiskPercent {
 
-		report.Status = "warning"
+		report.Status = "critical"
 	}
 }
 
@@ -227,7 +241,10 @@ func populateRecommendations(cfg *config.Config, report *HealthReport) {
 
 		report.Recommendations = append(
 			report.Recommendations,
-			"run gitback sync and inspect failed repositories under logs",
+			fmt.Sprintf(
+				"run gitback sync and inspect %s",
+				cfg.MirrorsStateFile,
+			),
 		)
 	}
 
