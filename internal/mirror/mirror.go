@@ -97,6 +97,8 @@ func (e *Engine) Sync(ctx context.Context) error {
 		return err
 	}
 
+	var gists []state.Asset
+
 	syncCompletedAt := time.Now()
 
 	if err := state.Save(
@@ -104,6 +106,7 @@ func (e *Engine) Sync(ctx context.Context) error {
 		syncStartedAt,
 		syncCompletedAt,
 		repositories,
+		gists,
 	); err != nil {
 
 		e.logger.Error(
@@ -116,10 +119,10 @@ func (e *Engine) Sync(ctx context.Context) error {
 	return nil
 }
 
-func (e *Engine) syncRepositories(ctx context.Context) ([]state.Repository, error) {
+func (e *Engine) syncRepositories(ctx context.Context) ([]state.Asset, error) {
 
 	jobs := make(chan string)
-	results := make(chan state.Repository)
+	results := make(chan state.Asset)
 
 	var wg sync.WaitGroup
 
@@ -141,7 +144,7 @@ func (e *Engine) syncRepositories(ctx context.Context) ([]state.Repository, erro
 		close(results)
 	}()
 
-	var repositories []state.Repository
+	var repositories []state.Asset
 
 	for result := range results {
 
@@ -161,7 +164,7 @@ func (e *Engine) syncRepositories(ctx context.Context) ([]state.Repository, erro
 func (e *Engine) startWorkers(
 	ctx context.Context,
 	jobs <-chan string,
-	results chan<- state.Repository,
+	results chan<- state.Asset,
 	wg *sync.WaitGroup,
 ) {
 
@@ -182,7 +185,7 @@ func (e *Engine) dispatchJobs(jobs chan<- string) error {
 
 	defer close(jobs)
 
-	file, err := os.Open(e.cfg.RepoInventory)
+	file, err := os.Open(e.cfg.RepositoryInventoryFile())
 
 	if err != nil {
 		return err
@@ -208,7 +211,7 @@ func (e *Engine) dispatchJobs(jobs chan<- string) error {
 func (e *Engine) worker(
 	ctx context.Context,
 	jobs <-chan string,
-	results chan<- state.Repository,
+	results chan<- state.Asset,
 	wg *sync.WaitGroup,
 ) {
 
@@ -226,7 +229,7 @@ func (e *Engine) worker(
 				err,
 			)
 
-			results <- state.Repository{
+			results <- state.Asset{
 				Name:        repo,
 				LastSuccess: false,
 				Error:       err.Error(),
@@ -235,7 +238,7 @@ func (e *Engine) worker(
 			continue
 		}
 
-		results <- state.Repository{
+		results <- state.Asset{
 			Name:        repo,
 			LastSuccess: true,
 		}
@@ -244,7 +247,7 @@ func (e *Engine) worker(
 
 func (e *Engine) syncRepository(ctx context.Context, repo string) error {
 	repoName := strings.TrimSuffix(filepath.Base(repo), ".git")
-	target := filepath.Join(e.cfg.MirrorDir, repoName+".git")
+	target := filepath.Join(e.cfg.RepositoryMirrorDir(), repoName+".git")
 
 	if _, err := os.Stat(target); os.IsNotExist(err) {
 		return e.cloneMirror(ctx, repo, target)

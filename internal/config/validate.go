@@ -69,7 +69,6 @@ func (c *Config) Validate() error {
 		"mirror_dir":         c.MirrorDir,
 		"snapshot_dir":       c.SnapshotDir,
 		"temp_dir":           c.TempDir,
-		"repo_inventory":     c.RepoInventory,
 		"lock_file":          c.LockFile,
 		"log_file":           c.LogFile,
 		"mirrors_state_file": c.MirrorsStateFile,

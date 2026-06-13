@@ -93,14 +93,14 @@ func (c *Client) Discover(ctx context.Context) error {
 	// Write repository inventory file.
 	// This file is consumed later by the sync engine.
 	f, err := os.OpenFile(
-		c.cfg.RepoInventory,
+		c.cfg.RepositoryInventoryFile(),
 		os.O_CREATE|os.O_WRONLY|os.O_TRUNC,
 		0600,
 	)
 	if err != nil {
 
 		return fmt.Errorf("open inventory file %s: %w",
-			c.cfg.RepoInventory,
+			c.cfg.RepositoryInventoryFile(),
 			err,
 		)
 	}
@@ -117,7 +117,7 @@ func (c *Client) Discover(ctx context.Context) error {
 		if err != nil {
 
 			return fmt.Errorf("write inventory file %s: %w",
-				c.cfg.RepoInventory,
+				c.cfg.RepositoryInventoryFile(),
 				err,
 			)
 		}

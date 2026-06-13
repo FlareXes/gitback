@@ -12,7 +12,8 @@ func Save(
 	path string,
 	syncStartedAt time.Time,
 	syncCompletedAt time.Time,
-	repositories []Repository,
+	repositories []Asset,
+	gists []Asset,
 ) error {
 
 	data := Mirrors{
@@ -29,6 +30,7 @@ func Save(
 			Format(time.RFC3339),
 
 		Repositories: repositories,
+		Gists:        gists,
 	}
 
 	file, err := os.Create(path)

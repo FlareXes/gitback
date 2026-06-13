@@ -34,12 +34,11 @@ type Config struct {
 
 	TempDir string `mapstructure:"temp_dir"`
 
-	RepoInventory string `mapstructure:"repo_inventory"`
-	LockFile      string `mapstructure:"lock_file"`
+	LockFile string `mapstructure:"lock_file"`
 
 	MinimumFreeDiskPercent int `mapstructure:"minimum_free_disk_percent"`
 
-	GitRetryAttempts int `mapstructure:"retry_attempts"`
+	GitRetryAttempts int `mapstructure:"git_retry_attempts"`
 	SyncWorkers      int `mapstructure:"sync_workers"`
 
 	SnapshotRetention int `mapstructure:"snapshot_retention"`
@@ -117,12 +116,6 @@ func Default() Config {
 			"tmp",
 		),
 
-		RepoInventory: filepath.Join(
-			dataDir,
-			"state",
-			"repositories.txt",
-		),
-
 		LockFile: "/tmp/gitback.lock",
 
 		MinimumFreeDiskPercent: 20,
@@ -189,6 +182,7 @@ state_dir: %s
 mirrors_state_file: %s
 
 mirror_dir: %s
+
 snapshot_dir: %s
 
 log_dir: %s
@@ -196,7 +190,6 @@ log_file: %s
 
 temp_dir: %s
 
-repo_inventory: %s
 lock_file: %s
 
 minimum_free_disk_percent: %d
@@ -223,7 +216,6 @@ snapshot_retention: %d
 
 		cfg.TempDir,
 
-		cfg.RepoInventory,
 		cfg.LockFile,
 
 		cfg.MinimumFreeDiskPercent,
@@ -238,5 +230,33 @@ snapshot_retention: %d
 		path,
 		[]byte(content),
 		0600,
+	)
+}
+
+func (c *Config) RepositoryMirrorDir() string {
+	return filepath.Join(
+		c.MirrorDir,
+		"repositories",
+	)
+}
+
+func (c *Config) GistMirrorDir() string {
+	return filepath.Join(
+		c.MirrorDir,
+		"gists",
+	)
+}
+
+func (c *Config) RepositoryInventoryFile() string {
+	return filepath.Join(
+		c.StateDir,
+		"repositories.txt",
+	)
+}
+
+func (c *Config) GistInventoryFile() string {
+	return filepath.Join(
+		c.StateDir,
+		"gists.txt",
 	)
 }
