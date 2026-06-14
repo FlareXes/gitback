@@ -7,7 +7,7 @@ import (
 	"fmt"
 
 	"github.com/flarexes/gitback/internal/config"
-	"github.com/flarexes/gitback/internal/github"
+	"github.com/flarexes/gitback/internal/discovery"
 	"github.com/flarexes/gitback/internal/logging"
 	"github.com/spf13/cobra"
 )
@@ -34,7 +34,7 @@ var discoverCmd = &cobra.Command{
 			"",
 		)
 
-		client, err := github.New(cfg, logger)
+		client, err := discovery.New(cfg, logger)
 		if err != nil {
 			return err
 		}
