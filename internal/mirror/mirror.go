@@ -104,6 +104,9 @@ func (e *Engine) Sync(ctx context.Context) error {
 		return err
 	}
 
+	printSyncSummary("Repositories", repositories)
+	printSyncSummary("Gists", gists)
+
 	syncCompletedAt := time.Now()
 
 	if err := state.Save(
@@ -482,4 +485,37 @@ func (e *Engine) extractRepoName(repoURL string) string {
 		parts[len(parts)-2],
 		parts[len(parts)-1],
 	)
+}
+
+func printSyncSummary(label string, assets []state.Asset) {
+
+	var failed []string
+	var healthy int
+
+	for _, asset := range assets {
+
+		if asset.LastSuccess {
+			healthy++
+			continue
+		}
+
+		failed = append(failed, asset.Name)
+	}
+
+	fmt.Println()
+	fmt.Println(label)
+
+	fmt.Printf("  Total:   %d\n", len(assets))
+	fmt.Printf("  Healthy: %d\n", healthy)
+	fmt.Printf("  Failed:  %d\n", len(failed))
+
+	if len(failed) > 0 {
+
+		fmt.Println()
+		fmt.Println("  Failed assets:")
+
+		for _, asset := range failed {
+			fmt.Printf("    - %s\n", asset)
+		}
+	}
 }
