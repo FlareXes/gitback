@@ -3,7 +3,6 @@
 package mirror
 
 import (
-	"bufio"
 	"context"
 	"fmt"
 	"os"
@@ -171,41 +170,30 @@ func (e *Engine) syncRepositories(ctx context.Context) ([]state.Asset, error) {
 
 func (e *Engine) syncGists(ctx context.Context) ([]state.Asset, error) {
 
-	file, err := os.Open(e.cfg.GistInventoryFile())
-
-	if os.IsNotExist(err) {
-
-		return nil, nil
-	}
+	gistURLs, err := state.ReadInventory(
+		e.cfg.GistInventoryFile(),
+	)
 
 	if err != nil {
-		return nil, err
-	}
 
-	defer file.Close()
+		return nil, fmt.Errorf(
+			"read gist inventory: %w",
+			err,
+		)
+	}
 
 	var gists []state.Asset
 
-	scanner := bufio.NewScanner(file)
+	for _, gistURL := range gistURLs {
 
-	for scanner.Scan() {
+		fmt.Printf("[GIST] %s\n", e.extractGistName(gistURL))
 
-		gist := strings.TrimSpace(
-			scanner.Text(),
-		)
-
-		if gist == "" {
-			continue
-		}
-
-		fmt.Printf("[GIST] %s\n", e.extractGistName(gist))
-
-		if err := e.syncGist(ctx, gist); err != nil {
+		if err := e.syncGist(ctx, gistURL); err != nil {
 
 			gists = append(
 				gists,
 				state.Asset{
-					Name:        gist,
+					Name:        gistURL,
 					LastSuccess: false,
 					Error:       err.Error(),
 				},
@@ -217,13 +205,13 @@ func (e *Engine) syncGists(ctx context.Context) ([]state.Asset, error) {
 		gists = append(
 			gists,
 			state.Asset{
-				Name:        gist,
+				Name:        gistURL,
 				LastSuccess: true,
 			},
 		)
 	}
 
-	return gists, scanner.Err()
+	return gists, nil
 }
 
 func (e *Engine) syncGist(ctx context.Context, gist string) error {
@@ -262,27 +250,21 @@ func (e *Engine) dispatchJobs(jobs chan<- string) error {
 
 	defer close(jobs)
 
-	file, err := os.Open(e.cfg.RepositoryInventoryFile())
+	repositories, err := state.ReadInventory(e.cfg.RepositoryInventoryFile())
 
 	if err != nil {
-		return err
+		return fmt.Errorf(
+			"read repository inventory: %w",
+			err,
+		)
 	}
-	defer file.Close()
 
-	scanner := bufio.NewScanner(file)
-
-	for scanner.Scan() {
-
-		repo := strings.TrimSpace(scanner.Text())
-
-		if repo == "" {
-			continue
-		}
+	for _, repo := range repositories {
 
 		jobs <- repo
 	}
 
-	return scanner.Err()
+	return nil
 }
 
 func (e *Engine) worker(

@@ -5,10 +5,10 @@ package github
 import (
 	"context"
 	"fmt"
-	"os"
 
 	"github.com/flarexes/gitback/internal/config"
 	"github.com/flarexes/gitback/internal/logging"
+	"github.com/flarexes/gitback/internal/state"
 	"github.com/google/go-github/v88/github"
 )
 
@@ -151,36 +151,36 @@ func (c *Client) discoverGists(ctx context.Context) (DiscoverResult, error) {
 	}, nil
 }
 
-func writeInventory(path string, items []string) error {
+// func writeInventory(path string, items []string) error {
 
-	f, err := os.OpenFile(
-		path,
-		os.O_CREATE|os.O_WRONLY|os.O_TRUNC,
-		0600,
-	)
+// 	f, err := os.OpenFile(
+// 		path,
+// 		os.O_CREATE|os.O_WRONLY|os.O_TRUNC,
+// 		0600,
+// 	)
 
-	if err != nil {
-		return fmt.Errorf("open inventory file %s: %w",
-			path,
-			err,
-		)
-	}
+// 	if err != nil {
+// 		return fmt.Errorf("open inventory file %s: %w",
+// 			path,
+// 			err,
+// 		)
+// 	}
 
-	defer f.Close()
+// 	defer f.Close()
 
-	for _, item := range items {
+// 	for _, item := range items {
 
-		if _, err := fmt.Fprintln(f, item); err != nil {
+// 		if _, err := fmt.Fprintln(f, item); err != nil {
 
-			return fmt.Errorf("write inventory file %s: %w",
-				path,
-				err,
-			)
-		}
-	}
+// 			return fmt.Errorf("write inventory file %s: %w",
+// 				path,
+// 				err,
+// 			)
+// 		}
+// 	}
 
-	return nil
-}
+// 	return nil
+// }
 
 func (c *Client) Discover(ctx context.Context) error {
 
@@ -193,7 +193,7 @@ func (c *Client) Discover(ctx context.Context) error {
 
 	repoCount := len(result.Items)
 
-	if err := writeInventory(
+	if err := state.WriteInventory(
 		c.cfg.RepositoryInventoryFile(),
 		result.Items,
 	); err != nil {
@@ -241,7 +241,7 @@ func (c *Client) Discover(ctx context.Context) error {
 
 		gistCount = len(result.Items)
 
-		if err := writeInventory(
+		if err := state.WriteInventory(
 			c.cfg.GistInventoryFile(),
 			result.Items,
 		); err != nil {
