@@ -9,310 +9,43 @@ import (
 	"os/exec"
 	"path/filepath"
 	"strings"
-	"sync"
 	"time"
 
-	"github.com/flarexes/gitback/internal/config"
 	"github.com/flarexes/gitback/internal/logging"
 	"github.com/flarexes/gitback/internal/state"
 )
 
-type Engine struct {
-	cfg    *config.Config
-	logger *logging.Logger
-}
+func printSyncSummary(label string, assets []state.Asset) {
 
-func New(cfg *config.Config, logger *logging.Logger) *Engine {
-	return &Engine{
-		cfg:    cfg,
-		logger: logger,
-	}
-}
+	var failed []string
+	var healthy int
 
-// Execute a git command with retry support.
-func (e *Engine) runGit(
-	ctx context.Context,
-	repo string,
-	env []string,
-	args ...string,
-) ([]byte, error) {
+	for _, asset := range assets {
 
-	var lastErr error
-
-	for attempt := 1; attempt <= e.cfg.GitRetryAttempts; attempt++ {
-
-		cmd := exec.CommandContext(
-			ctx,
-			"git",
-			args...,
-		)
-
-		cmd.Env = env
-
-		output, err := cmd.CombinedOutput()
-
-		if err == nil {
-			return output, nil
-		}
-
-		lastErr = err
-
-		if attempt == e.cfg.GitRetryAttempts {
-			break
-		}
-
-		e.logger.Emit(
-			logging.Entry{
-				Level: logging.Warn,
-				Event: logging.Events.Mirror.Retry,
-
-				Repo: repo,
-
-				Details: map[string]any{
-					"attempt":      attempt,
-					"max_attempts": e.cfg.GitRetryAttempts,
-				},
-			},
-		)
-
-		// Linear backoff: attempt 1 -> 5s, attempt 2 -> 10s
-		wait := time.Duration(attempt*5) * time.Second
-
-		time.Sleep(wait)
-	}
-
-	return nil, lastErr
-}
-
-func (e *Engine) Sync(ctx context.Context) error {
-
-	syncStartedAt := time.Now()
-
-	repositories, err := e.syncRepositories(
-		ctx,
-	)
-
-	if err != nil {
-		return err
-	}
-
-	// Gists
-	gists, err := e.syncGists(ctx)
-
-	if err != nil {
-		return err
-	}
-
-	printSyncSummary("Repositories", repositories)
-	printSyncSummary("Gists", gists)
-
-	syncCompletedAt := time.Now()
-
-	if err := state.Save(
-		e.cfg.MirrorsStateFile,
-		syncStartedAt,
-		syncCompletedAt,
-		repositories,
-		gists,
-	); err != nil {
-
-		e.logger.Error(
-			logging.Events.Mirror.StateSaveFailed,
-			"",
-			err,
-		)
-	}
-
-	return nil
-}
-
-func (e *Engine) syncRepositories(ctx context.Context) ([]state.Asset, error) {
-
-	jobs := make(chan string)
-	results := make(chan state.Asset)
-
-	var wg sync.WaitGroup
-
-	e.startWorkers(
-		ctx,
-		jobs,
-		results,
-		&wg,
-	)
-
-	dispatchErr := make(chan error, 1)
-
-	go func() {
-		dispatchErr <- e.dispatchJobs(jobs)
-	}()
-
-	go func() {
-		wg.Wait()
-		close(results)
-	}()
-
-	var repositories []state.Asset
-
-	for result := range results {
-
-		repositories = append(
-			repositories,
-			result,
-		)
-	}
-
-	if err := <-dispatchErr; err != nil {
-		return nil, err
-	}
-
-	return repositories, nil
-}
-
-func (e *Engine) syncGists(ctx context.Context) ([]state.Asset, error) {
-
-	gistURLs, err := state.ReadInventory(
-		e.cfg.GistInventoryFile(),
-	)
-
-	if err != nil {
-
-		return nil, fmt.Errorf(
-			"read gist inventory: %w",
-			err,
-		)
-	}
-
-	var gists []state.Asset
-
-	for _, gistURL := range gistURLs {
-
-		fmt.Printf("[GIST] %s\n", e.extractGistName(gistURL))
-
-		if err := e.syncGist(ctx, gistURL); err != nil {
-
-			gists = append(
-				gists,
-				state.Asset{
-					Name:        gistURL,
-					LastSuccess: false,
-					Error:       err.Error(),
-				},
-			)
-
+		if asset.LastSuccess {
+			healthy++
 			continue
 		}
 
-		gists = append(
-			gists,
-			state.Asset{
-				Name:        gistURL,
-				LastSuccess: true,
-			},
-		)
+		failed = append(failed, asset.Name)
 	}
 
-	return gists, nil
-}
+	fmt.Println()
+	fmt.Println(label)
 
-func (e *Engine) syncGist(ctx context.Context, gist string) error {
+	fmt.Printf("  Total:   %d\n", len(assets))
+	fmt.Printf("  Healthy: %d\n", healthy)
+	fmt.Printf("  Failed:  %d\n", len(failed))
 
-	gistID := strings.TrimSuffix(filepath.Base(gist), ".git")
-	target := filepath.Join(e.cfg.GistMirrorDir(), gistID+".git")
+	if len(failed) > 0 {
 
-	if _, err := os.Stat(target); os.IsNotExist(err) {
-		return e.cloneMirror(ctx, gist, target)
-	}
+		fmt.Println()
+		fmt.Println("  Failed assets:")
 
-	return e.updateMirror(ctx, target)
-}
-
-func (e *Engine) startWorkers(
-	ctx context.Context,
-	jobs <-chan string,
-	results chan<- state.Asset,
-	wg *sync.WaitGroup,
-) {
-
-	for i := 0; i < e.cfg.SyncWorkers; i++ {
-
-		wg.Add(1)
-
-		go e.worker(
-			ctx,
-			jobs,
-			results,
-			wg,
-		)
-	}
-}
-
-func (e *Engine) dispatchJobs(jobs chan<- string) error {
-
-	defer close(jobs)
-
-	repositories, err := state.ReadInventory(e.cfg.RepositoryInventoryFile())
-
-	if err != nil {
-		return fmt.Errorf(
-			"read repository inventory: %w",
-			err,
-		)
-	}
-
-	for _, repo := range repositories {
-
-		jobs <- repo
-	}
-
-	return nil
-}
-
-func (e *Engine) worker(
-	ctx context.Context,
-	jobs <-chan string,
-	results chan<- state.Asset,
-	wg *sync.WaitGroup,
-) {
-
-	defer wg.Done()
-
-	for repo := range jobs {
-
-		fmt.Printf("[REPO] %s\n", e.extractRepoName(repo))
-
-		if err := e.syncRepository(ctx, repo); err != nil {
-
-			e.logger.Error(
-				logging.Events.Sync.Failed,
-				repo,
-				err,
-			)
-
-			results <- state.Asset{
-				Name:        repo,
-				LastSuccess: false,
-				Error:       err.Error(),
-			}
-
-			continue
-		}
-
-		results <- state.Asset{
-			Name:        repo,
-			LastSuccess: true,
+		for _, asset := range failed {
+			fmt.Printf("    - %s\n", asset)
 		}
 	}
-}
-
-func (e *Engine) syncRepository(ctx context.Context, repo string) error {
-	repoName := strings.TrimSuffix(filepath.Base(repo), ".git")
-	target := filepath.Join(e.cfg.RepositoryMirrorDir(), repoName+".git")
-
-	if _, err := os.Stat(target); os.IsNotExist(err) {
-		return e.cloneMirror(ctx, repo, target)
-	}
-
-	return e.updateMirror(ctx, target)
 }
 
 func (e *Engine) cloneMirror(ctx context.Context, repo string, target string) error {
@@ -449,63 +182,16 @@ func (e *Engine) updateMirror(ctx context.Context, target string) error {
 	return nil
 }
 
-func (e *Engine) extractRepoName(repoURL string) string {
+func (e *Engine) syncMirror(ctx context.Context, url string, mirrorDir string) error {
 
-	repo := strings.TrimSuffix(
-		repoURL,
-		".git",
-	)
+	name := strings.TrimSuffix(filepath.Base(url), ".git")
+	target := filepath.Join(mirrorDir, name+".git")
 
-	parts := strings.Split(repo, "/")
-
-	if len(parts) < 2 {
-		return repo
+	// clone if asset doesn't exist
+	if _, err := os.Stat(target); os.IsNotExist(err) {
+		return e.cloneMirror(ctx, url, target)
 	}
 
-	return fmt.Sprintf(
-		"%s/%s",
-		parts[len(parts)-2],
-		parts[len(parts)-1],
-	)
-}
-
-func (e *Engine) extractGistName(gistURL string) string {
-
-	return strings.TrimSuffix(
-		filepath.Base(gistURL),
-		".git",
-	)
-}
-
-func printSyncSummary(label string, assets []state.Asset) {
-
-	var failed []string
-	var healthy int
-
-	for _, asset := range assets {
-
-		if asset.LastSuccess {
-			healthy++
-			continue
-		}
-
-		failed = append(failed, asset.Name)
-	}
-
-	fmt.Println()
-	fmt.Println(label)
-
-	fmt.Printf("  Total:   %d\n", len(assets))
-	fmt.Printf("  Healthy: %d\n", healthy)
-	fmt.Printf("  Failed:  %d\n", len(failed))
-
-	if len(failed) > 0 {
-
-		fmt.Println()
-		fmt.Println("  Failed assets:")
-
-		for _, asset := range failed {
-			fmt.Printf("    - %s\n", asset)
-		}
-	}
+	// update existing asset
+	return e.updateMirror(ctx, target)
 }
