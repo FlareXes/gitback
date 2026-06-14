@@ -198,7 +198,7 @@ func (e *Engine) syncGists(ctx context.Context) ([]state.Asset, error) {
 			continue
 		}
 
-		fmt.Printf("[GIST] %s\n", filepath.Base(gist))
+		fmt.Printf("[GIST] %s\n", e.extractGistName(gist))
 
 		if err := e.syncGist(ctx, gist); err != nil {
 
@@ -296,7 +296,7 @@ func (e *Engine) worker(
 
 	for repo := range jobs {
 
-		fmt.Printf("[SYNC] %s\n", e.extractRepoName(repo))
+		fmt.Printf("[REPO] %s\n", e.extractRepoName(repo))
 
 		if err := e.syncRepository(ctx, repo); err != nil {
 
@@ -484,6 +484,14 @@ func (e *Engine) extractRepoName(repoURL string) string {
 		"%s/%s",
 		parts[len(parts)-2],
 		parts[len(parts)-1],
+	)
+}
+
+func (e *Engine) extractGistName(gistURL string) string {
+
+	return strings.TrimSuffix(
+		filepath.Base(gistURL),
+		".git",
 	)
 }
 
