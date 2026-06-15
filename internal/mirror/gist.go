@@ -19,12 +19,25 @@ func (e *Engine) extractGistName(gistURL string) string {
 	)
 }
 
-func (e *Engine) syncGist(ctx context.Context, gist string) error {
+func (e *Engine) gistMirrorPath(gistURL string) string {
+
+	id := strings.TrimSuffix(
+		filepath.Base(gistURL),
+		".git",
+	)
+
+	return filepath.Join(
+		e.cfg.GistMirrorDir(),
+		id+".git",
+	)
+}
+
+func (e *Engine) syncGist(ctx context.Context, gistURL string) error {
 
 	return e.syncMirror(
 		ctx,
-		gist,
-		e.cfg.GistMirrorDir(),
+		gistURL,
+		e.gistMirrorPath(gistURL),
 	)
 }
 

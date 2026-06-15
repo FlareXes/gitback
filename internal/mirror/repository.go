@@ -5,6 +5,7 @@ package mirror
 import (
 	"context"
 	"fmt"
+	"path/filepath"
 	"strings"
 	"sync"
 
@@ -31,12 +32,36 @@ func (e *Engine) extractRepoName(repoURL string) string {
 	)
 }
 
+func (e *Engine) repositoryMirrorPath(repoURL string) string {
+
+	repo := strings.TrimSuffix(repoURL, ".git")
+
+	parts := strings.Split(repo, "/")
+
+	if len(parts) < 2 {
+
+		return filepath.Join(
+			e.cfg.RepositoryMirrorDir(),
+			filepath.Base(repoURL),
+		)
+	}
+
+	owner := parts[len(parts)-2]
+	name := parts[len(parts)-1]
+
+	return filepath.Join(
+		e.cfg.RepositoryMirrorDir(),
+		owner,
+		name+".git",
+	)
+}
+
 func (e *Engine) syncRepository(ctx context.Context, repo string) error {
 
 	return e.syncMirror(
 		ctx,
 		repo,
-		e.cfg.RepositoryMirrorDir(),
+		e.repositoryMirrorPath(repo),
 	)
 }
 

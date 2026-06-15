@@ -69,6 +69,15 @@ func (e *Engine) cloneMirror(ctx context.Context, repo string, target string) er
 
 	defer os.Remove(askPass)
 
+	if err := os.MkdirAll(filepath.Dir(target), 0700); err != nil {
+
+		return fmt.Errorf(
+			"create mirror directory %s: %w",
+			filepath.Dir(target),
+			err,
+		)
+	}
+
 	output, err := e.runGit(
 		ctx,
 		repoName,
@@ -182,10 +191,7 @@ func (e *Engine) updateMirror(ctx context.Context, target string) error {
 	return nil
 }
 
-func (e *Engine) syncMirror(ctx context.Context, url string, mirrorDir string) error {
-
-	name := strings.TrimSuffix(filepath.Base(url), ".git")
-	target := filepath.Join(mirrorDir, name+".git")
+func (e *Engine) syncMirror(ctx context.Context, url string, target string) error {
 
 	// clone if asset doesn't exist
 	if _, err := os.Stat(target); os.IsNotExist(err) {
