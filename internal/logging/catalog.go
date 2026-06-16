@@ -70,14 +70,19 @@ type SyncEvents struct {
 	Failed    string
 }
 
+type FilesystemEvents struct {
+	DirectoryRecreated string
+}
+
 type EventCatalog struct {
-	GitHub   GitHubEvents
-	Mirror   MirrorEvents
-	Snapshot SnapshotEvents
-	Lock     LockEvents
-	Health   HealthEvents
-	Restore  RestoreEvents
-	Sync     SyncEvents
+	GitHub     GitHubEvents
+	Mirror     MirrorEvents
+	Snapshot   SnapshotEvents
+	Lock       LockEvents
+	Health     HealthEvents
+	Restore    RestoreEvents
+	Sync       SyncEvents
+	Filesystem FilesystemEvents
 }
 
 var Events = EventCatalog{
@@ -147,5 +152,9 @@ var Events = EventCatalog{
 		Started:   "restore_started",
 		Completed: "restore_completed",
 		Failed:    "restore_failed",
+	},
+
+	Filesystem: FilesystemEvents{
+		DirectoryRecreated: "filesystem_directory_recreated",
 	},
 }

@@ -18,8 +18,11 @@ var healthCmd = &cobra.Command{
 	RunE: func(cmd *cobra.Command, args []string) error {
 
 		cfg, err := config.Load()
-
 		if err != nil {
+			return err
+		}
+
+		if err := cfg.EnsureDirectories(); err != nil {
 			return err
 		}
 

@@ -23,6 +23,10 @@ var discoverCmd = &cobra.Command{
 			return err
 		}
 
+		if err := cfg.EnsureDirectories(); err != nil {
+			return err
+		}
+
 		logger, err := logging.New(cfg.LogFile)
 		if err != nil {
 			return err

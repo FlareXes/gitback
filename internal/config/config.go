@@ -9,6 +9,7 @@ import (
 	"path/filepath"
 	"strings"
 
+	"github.com/flarexes/gitback/internal/logging"
 	"github.com/spf13/viper"
 )
 
@@ -267,4 +268,67 @@ func (c *Config) GistInventoryFile() string {
 		c.StateDir,
 		"gists.txt",
 	)
+}
+
+// EnsureDirectories creates all runtime directories required by GitBack.
+//
+// Missing directories are treated as a recoverable condition.
+// This allows commands such as:
+//
+//	gitback sync
+//
+// to work even if:
+//
+//	~/.local/share/gitback/mirrors
+//	~/.local/share/gitback/state
+//	~/.local/share/gitback/tmp
+//	~/.local/share/gitback/snapshots
+//
+// were accidentally removed.
+func (cfg *Config) EnsureDirectories() error {
+
+	dirs := []string{
+		cfg.DataDir,
+
+		cfg.MirrorDir,
+		cfg.RepositoryMirrorDir(),
+		cfg.GistMirrorDir(),
+
+		cfg.StateDir,
+
+		cfg.TempDir,
+
+		cfg.SnapshotDir,
+	}
+
+	logger, err := logging.New(cfg.LogFile)
+	if err != nil {
+		return err
+	}
+	defer logger.Close()
+
+	for _, dir := range dirs {
+
+		if _, err := os.Stat(dir); os.IsNotExist(err) {
+
+			fmt.Println("[WARN] Recreated missing directory: ", dir)
+
+			logger.Warn(
+				logging.Events.Filesystem.DirectoryRecreated,
+				"",
+				fmt.Sprintf("Recreated missing directory: %s", dir),
+			)
+		}
+
+		if err := os.MkdirAll(dir, 0700); err != nil {
+
+			return fmt.Errorf(
+				"create directory %s: %w",
+				dir,
+				err,
+			)
+		}
+	}
+
+	return nil
 }
