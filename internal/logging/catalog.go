@@ -10,6 +10,11 @@ type GitHubEvents struct {
 	RateLimit string
 }
 
+type InventoryEvents struct {
+	Missing string
+	Empty   string
+}
+
 type MirrorEvents struct {
 	CloneStarted   string
 	CloneCompleted string
@@ -76,6 +81,7 @@ type FilesystemEvents struct {
 
 type EventCatalog struct {
 	GitHub     GitHubEvents
+	Inventory  InventoryEvents
 	Mirror     MirrorEvents
 	Snapshot   SnapshotEvents
 	Lock       LockEvents
@@ -92,6 +98,11 @@ var Events = EventCatalog{
 		DiscoveryFailed:    "discovery_failed",
 
 		RateLimit: "github_rate_limit",
+	},
+
+	Inventory: InventoryEvents{
+		Missing: "inventory_missing",
+		Empty:   "inventory_empty",
 	},
 
 	Mirror: MirrorEvents{
