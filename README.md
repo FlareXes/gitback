@@ -1,31 +1,23 @@
 # GitBack
 
-Simple, transparent GitHub repository backups.
+Simple, transparent GitHub repository and Gist backups.
 
-GitBack discovers repositories from GitHub, maintains local mirrors, and creates compressed snapshots for long-term storage. It is designed to run unattended while remaining easy to inspect, troubleshoot, and recover from.
+GitBack discovers repositories and gists from GitHub, maintains local mirrors, and creates compressed snapshots for long-term storage. It is designed to run unattended while remaining easy to inspect, troubleshoot, and recover from.
 
 ## Features
 
-- Backup Public and private GitHub repository
-    
-- Local Git mirror synchronization
-    
-- Compressed snapshots (`tar + zstd`)
-    
-- SHA256 checksum for integrity check
-    
-- Structured JSON logging
-    
-- Health reporting
-    
-- Environment diagnostics
-    
-- No database
-    
-- No daemon
-    
-- No proprietary formats
-    
+* Backup GitHub repositories
+* Backup GitHub Gists
+* Concurrent repository synchronization
+* Compressed snapshots (`tar + zstd`)
+* SHA256 checksum generation and verification
+* Structured JSON logging
+* Health reporting
+* Environment diagnostics
+* Snapshot retention
+* No database
+* No daemon
+* No proprietary formats    
 
 ## Installation
 
@@ -78,7 +70,7 @@ Creates configuration and validates GitHub authentication.
 gitback discover
 ```
 
-Discovers repositories accessible to the configured GitHub account.
+Discovers repositories and gists accessible to the configured GitHub account.
 
 ### Sync
 
@@ -94,7 +86,7 @@ Creates and updates local Git mirrors.
 gitback snapshot
 ```
 
-Creates a compressed archive containing all mirrored repositories.
+Creates a compressed archive containing all mirrored repositories, gists, and backup state.
 
 Force mode:
 
@@ -102,7 +94,7 @@ Force mode:
 gitback snapshot --force
 ```
 
-Continues snapshot creation even if repository sync was failed.
+Continues snapshot creation even if repository or gist synchronization previously failed.
 
 ### Health
 
@@ -163,10 +155,13 @@ Data:
 ```text
 ~/.local/share/gitback/
 ├── mirrors/
+│   ├── repositories/
+│   └── gists/
 ├── snapshots/
 └── state/
     ├── github.token
     ├── repositories.txt
+    ├── gists.txt
     └── mirrors.json
 ```
 
@@ -174,8 +169,11 @@ Runtime state:
 
 ```text
 ~/.local/state/gitback/
-├── gitback.log
-└── gitback.lock
+└── gitback.log
+```
+
+```text
+/tmp/gitback.lock
 ```
 
 ## Logging
@@ -245,11 +243,13 @@ Can be scheduled using:
     
 - [ ] Multi-worker synchronization
     
-- [ ] Git retry and backoff support
+- [x] Git retry and backoff support
     
 - [ ] GitHub organization support
     
 - [ ] Repository filtering
+
+- [ ] Wiki backups
 
 
 ## Contributing
