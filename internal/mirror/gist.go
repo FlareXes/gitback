@@ -7,7 +7,9 @@ import (
 	"fmt"
 	"path/filepath"
 	"strings"
+	"sync"
 
+	"github.com/flarexes/gitback/internal/logging"
 	"github.com/flarexes/gitback/internal/state"
 )
 
@@ -43,46 +45,91 @@ func (e *Engine) syncGist(ctx context.Context, gistURL string) error {
 
 func (e *Engine) syncGists(ctx context.Context) ([]state.Asset, error) {
 
-	gistURLs, err := state.ReadInventory(
-		e.cfg.GistInventoryFile(),
+	jobs := make(chan string)
+	results := make(chan state.Asset)
+
+	var wg sync.WaitGroup
+
+	e.startWorkers(
+		ctx,
+		e.syncGist,
+		jobs,
+		results,
+		&wg,
 	)
 
-	if err != nil {
+	dispatchErr := make(chan error, 1)
 
-		return nil, fmt.Errorf(
-			"read gist inventory: %w",
-			err,
+	go func() {
+		dispatchErr <- e.dispatchGistJobs(
+			jobs,
 		)
-	}
+	}()
+
+	go func() {
+		wg.Wait()
+		close(results)
+	}()
 
 	var gists []state.Asset
 
-	for _, gistURL := range gistURLs {
-
-		fmt.Printf("[GIST] %s\n", e.extractGistName(gistURL))
-
-		if err := e.syncGist(ctx, gistURL); err != nil {
-
-			gists = append(
-				gists,
-				state.Asset{
-					Name:        gistURL,
-					LastSuccess: false,
-					Error:       err.Error(),
-				},
-			)
-
-			continue
-		}
+	for result := range results {
 
 		gists = append(
 			gists,
-			state.Asset{
-				Name:        gistURL,
-				LastSuccess: true,
-			},
+			result,
 		)
 	}
 
+	if err := <-dispatchErr; err != nil {
+		return nil, err
+	}
+
 	return gists, nil
+}
+
+func (e *Engine) dispatchGistJobs(jobs chan<- string) error {
+
+	defer close(jobs)
+
+	gists, err := state.ReadInventory(e.cfg.GistInventoryFile())
+
+	if err != nil {
+
+		e.logger.Warn(
+			logging.Events.Inventory.Missing,
+			e.cfg.GistInventoryFile(),
+			"gist inventory file not found",
+		)
+
+		fmt.Println(
+			"[WARN] Gist inventory missing. Run: gitback discover",
+		)
+
+		return nil
+	}
+
+	if len(gists) == 0 {
+
+		e.logger.Warn(
+			logging.Events.Inventory.Empty,
+			e.cfg.GistInventoryFile(),
+			"gist inventory file is empty",
+		)
+
+		fmt.Println(
+			"[WARN] Gist inventory empty. Run: gitback discover",
+		)
+
+		return nil
+	}
+
+	for _, gist := range gists {
+
+		fmt.Printf("[GIST] %s\n", e.extractGistName(gist))
+
+		jobs <- gist
+	}
+
+	return nil
 }

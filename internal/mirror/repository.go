@@ -75,6 +75,7 @@ func (e *Engine) syncRepositories(ctx context.Context) ([]state.Asset, error) {
 
 	e.startWorkers(
 		ctx,
+		e.syncRepository,
 		jobs,
 		results,
 		&wg,
@@ -119,7 +120,7 @@ func (e *Engine) dispatchRepositoryJobs(jobs chan<- string) error {
 		e.logger.Warn(
 			logging.Events.Inventory.Missing,
 			e.cfg.RepositoryInventoryFile(),
-			"inventory file not found",
+			"repository inventory file not found",
 		)
 
 		fmt.Println(

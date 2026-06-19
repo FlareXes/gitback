@@ -10,8 +10,14 @@ import (
 	"github.com/flarexes/gitback/internal/state"
 )
 
+type SyncFunc func(
+	context.Context,
+	string,
+) error
+
 func (e *Engine) worker(
 	ctx context.Context,
+	syncFn SyncFunc,
 	jobs <-chan string,
 	results chan<- state.Asset,
 	wg *sync.WaitGroup,
@@ -19,18 +25,18 @@ func (e *Engine) worker(
 
 	defer wg.Done()
 
-	for repo := range jobs {
+	for asset := range jobs {
 
-		if err := e.syncRepository(ctx, repo); err != nil {
+		if err := syncFn(ctx, asset); err != nil {
 
 			e.logger.Error(
 				logging.Events.Sync.Failed,
-				repo,
+				asset,
 				err,
 			)
 
 			results <- state.Asset{
-				Name:        repo,
+				Name:        asset,
 				LastSuccess: false,
 				Error:       err.Error(),
 			}
@@ -39,7 +45,7 @@ func (e *Engine) worker(
 		}
 
 		results <- state.Asset{
-			Name:        repo,
+			Name:        asset,
 			LastSuccess: true,
 		}
 	}
@@ -47,6 +53,7 @@ func (e *Engine) worker(
 
 func (e *Engine) startWorkers(
 	ctx context.Context,
+	syncFn SyncFunc,
 	jobs <-chan string,
 	results chan<- state.Asset,
 	wg *sync.WaitGroup,
@@ -58,6 +65,7 @@ func (e *Engine) startWorkers(
 
 		go e.worker(
 			ctx,
+			syncFn,
 			jobs,
 			results,
 			wg,
