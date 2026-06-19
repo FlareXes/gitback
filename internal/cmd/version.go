@@ -25,7 +25,7 @@ func init() {
 			return cmd.Help()
 		}
 
-		fmt.Printf("gitback %s\n", version.Version)
+		fmt.Printf("gitback %s\n", version.Get())
 
 		return nil
 	}

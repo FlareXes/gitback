@@ -4,6 +4,8 @@ VERSION ?= dev
 BUILD_DIR := /tmp/gitback
 RELEASE_DIR := $(BUILD_DIR)/gitback-release
 
+LDFLAGS := -s -w -X github.com/flarexes/gitback/internal/version.Version=$(VERSION)
+
 .PHONY: build run test clean release
 
 build:
@@ -11,7 +13,7 @@ build:
 
 	go build \
 		-trimpath \
-		-ldflags="-s -w -X github.com/flarexes/gitback/internal/version.Version=$(VERSION)" \
+		-ldflags="$(LDFLAGS)" \
 		-o $(BUILD_DIR)/$(BINARY) \
 		./cmd/gitback
 
@@ -40,14 +42,14 @@ release:
 	GOOS=linux GOARCH=amd64 \
 	go build \
 		-trimpath \
-		-ldflags="-s -w -X github.com/flarexes/gitback/internal/version.Version=$(VERSION)" \
+		-ldflags="$(LDFLAGS)" \
 		-o $(RELEASE_DIR)/$(BINARY)-linux-amd64 \
 		./cmd/gitback
 
 	GOOS=linux GOARCH=arm64 \
 	go build \
 		-trimpath \
-		-ldflags="-s -w -X github.com/flarexes/gitback/internal/version.Version=$(VERSION)" \
+		-ldflags="$(LDFLAGS)" \
 		-o $(RELEASE_DIR)/$(BINARY)-linux-arm64 \
 		./cmd/gitback
 
