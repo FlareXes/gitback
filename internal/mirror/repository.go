@@ -82,7 +82,7 @@ func (e *Engine) syncRepositories(ctx context.Context) ([]state.Asset, error) {
 	dispatchErr := make(chan error, 1)
 
 	go func() {
-		dispatchErr <- e.dispatchJobs(jobs)
+		dispatchErr <- e.dispatchRepositoryJobs(jobs)
 	}()
 
 	go func() {

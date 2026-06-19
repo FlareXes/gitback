@@ -22,8 +22,6 @@ func (e *Engine) worker(
 
 	for repo := range jobs {
 
-		fmt.Printf("[REPO] %s\n", e.extractRepoName(repo))
-
 		if err := e.syncRepository(ctx, repo); err != nil {
 
 			e.logger.Error(
@@ -68,7 +66,7 @@ func (e *Engine) startWorkers(
 	}
 }
 
-func (e *Engine) dispatchJobs(jobs chan<- string) error {
+func (e *Engine) dispatchRepositoryJobs(jobs chan<- string) error {
 
 	defer close(jobs)
 
@@ -105,6 +103,8 @@ func (e *Engine) dispatchJobs(jobs chan<- string) error {
 	}
 
 	for _, repo := range repositories {
+
+		fmt.Printf("[REPO] %s\n", e.extractRepoName(repo))
 
 		jobs <- repo
 	}
