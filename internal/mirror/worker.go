@@ -4,7 +4,6 @@ package mirror
 
 import (
 	"context"
-	"fmt"
 	"sync"
 
 	"github.com/flarexes/gitback/internal/logging"
@@ -64,50 +63,4 @@ func (e *Engine) startWorkers(
 			wg,
 		)
 	}
-}
-
-func (e *Engine) dispatchRepositoryJobs(jobs chan<- string) error {
-
-	defer close(jobs)
-
-	repositories, err := state.ReadInventory(e.cfg.RepositoryInventoryFile())
-
-	if err != nil {
-
-		e.logger.Warn(
-			logging.Events.Inventory.Missing,
-			e.cfg.RepositoryInventoryFile(),
-			"inventory file not found",
-		)
-
-		fmt.Println(
-			"[WARN] Repository inventory missing. Run: gitback discover",
-		)
-
-		return nil
-	}
-
-	if len(repositories) == 0 {
-
-		e.logger.Warn(
-			logging.Events.Inventory.Empty,
-			e.cfg.RepositoryInventoryFile(),
-			"inventory file is empty",
-		)
-
-		fmt.Println(
-			"[WARN] Repository inventory empty. Run: gitback discover",
-		)
-
-		return nil
-	}
-
-	for _, repo := range repositories {
-
-		fmt.Printf("[REPO] %s\n", e.extractRepoName(repo))
-
-		jobs <- repo
-	}
-
-	return nil
 }
