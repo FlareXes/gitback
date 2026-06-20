@@ -147,9 +147,9 @@ func (e *Engine) dispatchRepositoryJobs(jobs chan<- string) error {
 
 	for _, repo := range repositories {
 
-		fmt.Printf("[REPO] %s\n", e.extractRepoName(repo))
-
 		jobs <- repo
+
+		fmt.Printf("[REPO] %s\n", e.extractRepoName(repo))
 	}
 
 	return nil
