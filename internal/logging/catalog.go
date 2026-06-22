@@ -6,6 +6,11 @@ type GitHubEvents struct {
 	DiscoveryStarted   string
 	DiscoveryCompleted string
 	DiscoveryFailed    string
+	DiscoverySummary   string
+
+	PageFetched string
+
+	InventoryLoaded string
 
 	RateLimit string
 }
@@ -42,6 +47,17 @@ type SnapshotEvents struct {
 	VerificationPassed  string
 	VerificationFailed  string
 
+	ArchiveStarted   string
+	ArchiveCompleted string
+
+	CompressionStarted   string
+	CompressionCompleted string
+
+	ChecksumStarted   string
+	ChecksumCompleted string
+
+	Summary string
+
 	RetentionDisabled  string
 	RetentionStarted   string
 	RetentionCompleted string
@@ -73,6 +89,9 @@ type SyncEvents struct {
 	Started   string
 	Completed string
 	Failed    string
+
+	// Run-level summary.
+	Summary string
 }
 
 type FilesystemEvents struct {
@@ -96,6 +115,12 @@ var Events = EventCatalog{
 		DiscoveryStarted:   "discovery_started",
 		DiscoveryCompleted: "discovery_completed",
 		DiscoveryFailed:    "discovery_failed",
+
+		DiscoverySummary: "discovery_summary",
+
+		PageFetched: "github_page_fetched",
+
+		InventoryLoaded: "inventory_loaded",
 
 		RateLimit: "github_rate_limit",
 	},
@@ -127,6 +152,8 @@ var Events = EventCatalog{
 		Started:   "sync_started",
 		Completed: "sync_completed",
 		Failed:    "sync_failed",
+
+		Summary: "sync_summary",
 	},
 
 	Snapshot: SnapshotEvents{
@@ -137,6 +164,17 @@ var Events = EventCatalog{
 		VerificationStarted: "snapshot_verification_started",
 		VerificationPassed:  "snapshot_verification_passed",
 		VerificationFailed:  "snapshot_verification_failed",
+
+		ArchiveStarted:   "snapshot_archive_started",
+		ArchiveCompleted: "snapshot_archive_completed",
+
+		CompressionStarted:   "snapshot_compression_started",
+		CompressionCompleted: "snapshot_compression_completed",
+
+		ChecksumStarted:   "snapshot_checksum_started",
+		ChecksumCompleted: "snapshot_checksum_completed",
+
+		Summary: "snapshot_summary",
 
 		RetentionDisabled:  "snapshot_retention_disabled",
 		RetentionStarted:   "snapshot_retention_started",
