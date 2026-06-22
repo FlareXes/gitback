@@ -1,4 +1,4 @@
-// internal/discover/github.go
+// internal/discover/discovery.go
 
 package discovery
 
@@ -37,7 +37,7 @@ func (c *Client) Discover(ctx context.Context) error {
 	}
 
 	// Log discovery completion
-	c.logDiscovery("repositories", repoCount, result.RateLimit)
+	c.logDiscovery("repositories", repoCount, c.cfg.RepositoryInventoryFile(), result.RateLimit)
 
 	// Gist
 	gistCount := 0
@@ -62,7 +62,7 @@ func (c *Client) Discover(ctx context.Context) error {
 		}
 
 		// Log gist completion
-		c.logDiscovery("gists", gistCount, result.RateLimit)
+		c.logDiscovery("gists", gistCount, c.cfg.GistInventoryFile(), result.RateLimit)
 	}
 
 	fmt.Println()
@@ -72,10 +72,41 @@ func (c *Client) Discover(ctx context.Context) error {
 		fmt.Println("Gist:       ", gistCount)
 	}
 
+	c.logger.Emit(
+		logging.Entry{
+			Level: logging.Info,
+			Event: logging.Events.GitHub.DiscoverySummary,
+
+			Details: map[string]any{
+				"repositories": repoCount,
+				"gists":        gistCount,
+				"total":        repoCount + gistCount,
+			},
+		},
+	)
+
 	return nil
 }
 
-func (c *Client) logDiscovery(resource string, count int, rate github.Rate) {
+func (c *Client) logDiscovery(
+	resource string,
+	count int,
+	inventoryPath string,
+	rate github.Rate,
+) {
+
+	c.logger.Emit(
+		logging.Entry{
+			Level: logging.Info,
+			Event: logging.Events.GitHub.InventoryLoaded,
+
+			Details: map[string]any{
+				"resource": resource,
+				"count":    count,
+				"path":     inventoryPath,
+			},
+		},
+	)
 
 	c.logger.Emit(
 		logging.Entry{

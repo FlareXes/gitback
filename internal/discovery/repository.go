@@ -6,6 +6,7 @@ import (
 	"context"
 	"fmt"
 
+	"github.com/flarexes/gitback/internal/logging"
 	"github.com/google/go-github/v88/github"
 )
 
@@ -23,7 +24,9 @@ func (c *Client) discoverRepositories(ctx context.Context) (DiscoverResult, erro
 
 	for {
 
-		fmt.Printf("Fetching repositories  (page %d)\n", opt.Page+1)
+		page := opt.Page + 1
+
+		fmt.Printf("Fetching repositories  (page %d)\n", page)
 
 		repos, resp, err := c.api.Repositories.ListByAuthenticatedUser(
 			ctx,
@@ -48,6 +51,20 @@ func (c *Client) discoverRepositories(ctx context.Context) (DiscoverResult, erro
 			)
 		}
 
+		c.logger.Emit(
+			logging.Entry{
+				Level: logging.Info,
+				Event: logging.Events.GitHub.PageFetched,
+
+				Details: map[string]any{
+					"resource":     "repositories",
+					"page":         page,
+					"items":        len(repos),
+					"total_so_far": len(all),
+				},
+			},
+		)
+
 		if resp.NextPage == 0 {
 			break
 		}
@@ -56,7 +73,7 @@ func (c *Client) discoverRepositories(ctx context.Context) (DiscoverResult, erro
 	}
 
 	return DiscoverResult{
-		URLs:     all,
+		URLs:      all,
 		RateLimit: lastResponse.Rate,
 	}, nil
 }
