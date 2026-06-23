@@ -98,25 +98,76 @@ func (e *Engine) Create(ctx context.Context, force bool) error {
 	}
 
 	// Create tar archive.
+	e.logger.Info(
+		logging.Events.Snapshot.ArchiveStarted,
+		"",
+	)
+
 	fmt.Println("[2/5] Creating archive")
+
 	if err := e.createTar(ctx, tarFile); err != nil {
 		return err
 	}
+
+	e.logger.Emit(
+		logging.Entry{
+			Level: logging.Info,
+			Event: logging.Events.Snapshot.ArchiveCompleted,
+
+			Details: map[string]any{
+				"archive": tarFile,
+			},
+		},
+	)
 
 	// Always cleanup temporary tar file.
 	defer os.Remove(tarFile)
 
 	// Compress archive.
+	e.logger.Info(
+		logging.Events.Snapshot.CompressionStarted,
+		"",
+	)
+
 	fmt.Println("[3/5] Compressing archive")
+
 	if err := e.compress(ctx, tarFile); err != nil {
 		return err
 	}
 
+	e.logger.Emit(
+		logging.Entry{
+			Level: logging.Info,
+			Event: logging.Events.Snapshot.CompressionCompleted,
+
+			Details: map[string]any{
+				"archive": archiveFile,
+			},
+		},
+	)
+
 	// Generate checksum.
+	e.logger.Info(
+		logging.Events.Snapshot.ChecksumStarted,
+		"",
+	)
+
 	fmt.Println("[4/5] Generating checksum")
+
 	if err := e.sha256(archiveFile, checksumFile); err != nil {
 		return err
 	}
+
+	e.logger.Emit(
+		logging.Entry{
+			Level: logging.Info,
+			Event: logging.Events.Snapshot.ChecksumCompleted,
+
+			Details: map[string]any{
+				"checksum": checksumFile,
+			},
+		},
+	)
 
 	// Apply retention policy.
 	fmt.Println("[5/5] Applying retention policy")
@@ -132,15 +183,25 @@ func (e *Engine) Create(ctx context.Context, force bool) error {
 	fmt.Println()
 	fmt.Println("Snapshot saved at " + archiveFile)
 
-	e.logger.Duration(
-		logging.Events.Snapshot.Completed,
-		"",
-		time.Since(start),
+	e.logger.Emit(
+		logging.Entry{
+			Level: logging.Info,
+			Event: logging.Events.Snapshot.Summary,
+
+			DurationMS: time.Since(start).Milliseconds(),
+
+			Details: map[string]any{
+				"archive":    archiveFile,
+				"checksum":   checksumFile,
+				"force_mode": force,
+			},
+		},
 	)
 
 	return nil
 }
 
+// verifyDependencies checks if required system dependencies are available.
 func (e *Engine) verifyDependencies() error {
 
 	required := []string{"tar", "zstd"}
@@ -156,6 +217,7 @@ func (e *Engine) verifyDependencies() error {
 	return nil
 }
 
+// verifyMirrors checks the health of all mirrored repositories.
 func (e *Engine) verifyMirrors() error {
 
 	e.logger.Info(

@@ -29,6 +29,7 @@ var snapshotCmd = &cobra.Command{
 			return err
 		}
 
+		// Logging
 		logger, err := logging.New(cfg.LogFile)
 		if err != nil {
 			return err
@@ -36,6 +37,12 @@ var snapshotCmd = &cobra.Command{
 
 		defer logger.Close()
 
+		logger.Info(
+			logging.Events.Snapshot.Started,
+			"",
+		)
+
+		// Lock
 		locker := lock.New(cfg.LockFile)
 
 		unlock, err := locker.Acquire()
@@ -56,6 +63,7 @@ var snapshotCmd = &cobra.Command{
 			)
 		}()
 
+		// Snapshot
 		engine := snapshot.New(cfg, logger)
 
 		if err := engine.Create(context.Background(), snapshotForce); err != nil {
@@ -68,6 +76,11 @@ var snapshotCmd = &cobra.Command{
 
 			return err
 		}
+
+		logger.Info(
+			logging.Events.Snapshot.Completed,
+			"",
+		)
 
 		return nil
 	},
