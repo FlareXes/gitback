@@ -4,10 +4,12 @@ package cmd
 
 import (
 	"encoding/json"
+	"fmt"
 	"os"
 
 	"github.com/flarexes/gitback/internal/config"
 	"github.com/flarexes/gitback/internal/health"
+	"github.com/flarexes/gitback/internal/logging"
 	"github.com/spf13/cobra"
 )
 
@@ -34,6 +36,14 @@ var healthCmd = &cobra.Command{
 			return err
 		}
 
+		if err := logHealthReport(cfg.LogFile, report); err != nil {
+			fmt.Fprintf(
+				os.Stderr,
+				"[WARN] Failed to write health report to log: %v\n",
+				err,
+			)
+		}
+
 		encoder := json.NewEncoder(
 			os.Stdout,
 		)
@@ -47,4 +57,26 @@ var healthCmd = &cobra.Command{
 			report,
 		)
 	},
+}
+
+func logHealthReport(logFile string, report *health.HealthReport) error {
+
+	logger, err := logging.New(logFile)
+
+	if err != nil {
+		return err
+	}
+	defer logger.Close()
+
+	logger.Emit(
+		logging.Entry{
+			Level: logging.Info,
+			Event: logging.Events.Health.HealthReport,
+			Details: map[string]any{
+				"report": report,
+			},
+		},
+	)
+
+	return nil
 }
