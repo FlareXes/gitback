@@ -98,6 +98,10 @@ type FilesystemEvents struct {
 	DirectoryRecreated string
 }
 
+type DoctorEvents struct {
+	ReportGenerated string
+}
+
 type EventCatalog struct {
 	GitHub     GitHubEvents
 	Inventory  InventoryEvents
@@ -108,6 +112,7 @@ type EventCatalog struct {
 	Restore    RestoreEvents
 	Sync       SyncEvents
 	Filesystem FilesystemEvents
+	Doctor     DoctorEvents
 }
 
 var Events = EventCatalog{
@@ -205,5 +210,9 @@ var Events = EventCatalog{
 
 	Filesystem: FilesystemEvents{
 		DirectoryRecreated: "filesystem_directory_recreated",
+	},
+
+	Doctor: DoctorEvents{
+		ReportGenerated: "doctor_report_generated",
 	},
 }

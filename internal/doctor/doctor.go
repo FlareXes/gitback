@@ -5,7 +5,6 @@ package doctor
 
 import (
 	"context"
-	"fmt"
 	"os"
 	"os/exec"
 
@@ -14,13 +13,13 @@ import (
 )
 
 type Check struct {
-	Name           string
-	Success        bool
-	Recommendation string
+	Name           string `json:"name"`
+	Success        bool   `json:"success"`
+	Recommendation string `json:"recommendation,omitempty"`
 }
 
 type Report struct {
-	Checks []Check
+	Checks []Check `json:"checks"`
 }
 
 func Run(cfg *config.Config) (*Report, error) {
@@ -197,28 +196,5 @@ func checkGitHub(cfg *config.Config) Check {
 		Name:           "github authentication",
 		Success:        err == nil,
 		Recommendation: "Verify token permissions",
-	}
-}
-
-func (r *Report) Print() {
-
-	for _, check := range r.Checks {
-
-		if check.Success {
-
-			fmt.Printf("[OK]   %s\n", check.Name)
-
-			continue
-		}
-
-		fmt.Printf("[FAIL] %s\n", check.Name)
-
-		if check.Recommendation != "" {
-
-			fmt.Printf(
-				"       Recommendation: %s\n",
-				check.Recommendation,
-			)
-		}
 	}
 }
