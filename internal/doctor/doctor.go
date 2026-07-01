@@ -5,6 +5,7 @@ package doctor
 
 import (
 	"context"
+	"fmt"
 	"os"
 	"os/exec"
 
@@ -16,6 +17,7 @@ type Check struct {
 	Name           string `json:"name"`
 	Success        bool   `json:"success"`
 	Recommendation string `json:"recommendation,omitempty"`
+	Message        string `json:"message,omitempty"`
 }
 
 type Report struct {
@@ -116,20 +118,50 @@ func checkBinary(name string, recommendation string) Check {
 
 	_, err := exec.LookPath(name)
 
-	return Check{
+	check := Check{
 		Name:           name,
 		Success:        err == nil,
 		Recommendation: recommendation,
 	}
+
+	if err != nil {
+		check.Message = err.Error()
+	}
+
+	return check
 }
 
-func checkDirectory(name string, path string) Check {
+func checkDirectory(name, path string) Check {
 
 	info, err := os.Stat(path)
 
+	if err != nil {
+		return Check{
+			Name:    name,
+			Success: false,
+			Message: err.Error(),
+			Recommendation: fmt.Sprintf(
+				"Run \"gitback init\" or ensure the directory exists and is accessible: %s",
+				path,
+			),
+		}
+	}
+
+	if !info.IsDir() {
+		return Check{
+			Name:    name,
+			Success: false,
+			Message: "path exists but is not a directory",
+			Recommendation: fmt.Sprintf(
+				"Run \"gitback init\" or replace it with a directory: %s",
+				path,
+			),
+		}
+	}
+
 	return Check{
 		Name:    name,
-		Success: err == nil && info.IsDir(),
+		Success: true,
 	}
 }
 
@@ -137,11 +169,17 @@ func checkFile(name string, path string, recommendation string) Check {
 
 	_, err := os.Stat(path)
 
-	return Check{
-		Name:           name,
-		Success:        err == nil,
-		Recommendation: recommendation,
+	check := Check{
+		Name:    name,
+		Success: err == nil,
 	}
+
+	if err != nil {
+		check.Message = err.Error()
+		check.Recommendation = fmt.Sprintf(recommendation, path)
+	}
+
+	return check
 }
 
 func checkLogFile(path string) Check {
@@ -156,10 +194,17 @@ func checkLogFile(path string) Check {
 		file.Close()
 	}
 
-	return Check{
+	check := Check{
 		Name:    "log file writable",
 		Success: err == nil,
 	}
+
+	if err != nil {
+		check.Message = err.Error()
+		check.Recommendation = "Ensure the log file path is writable and the parent directory exists"
+	}
+
+	return check
 }
 
 func checkGitHub(cfg *config.Config) Check {
@@ -170,6 +215,7 @@ func checkGitHub(cfg *config.Config) Check {
 			Name:           "github authentication",
 			Success:        false,
 			Recommendation: "Run: gitback init",
+			Message:        "GitHub token is not set",
 		}
 	}
 
@@ -182,8 +228,10 @@ func checkGitHub(cfg *config.Config) Check {
 	if err != nil {
 
 		return Check{
-			Name:    "github authentication",
-			Success: false,
+			Name:           "github authentication",
+			Success:        false,
+			Message:        err.Error(),
+			Recommendation: "Verify the GitHub token and its permissions.",
 		}
 	}
 
@@ -195,6 +243,6 @@ func checkGitHub(cfg *config.Config) Check {
 	return Check{
 		Name:           "github authentication",
 		Success:        err == nil,
-		Recommendation: "Verify token permissions",
+		Recommendation: "Verify the GitHub token and its permissions",
 	}
 }

@@ -89,8 +89,14 @@ func printDoctorReport(report *doctor.Report) {
 
 		fmt.Printf("[FAIL] %s\n", check.Name)
 
-		if check.Recommendation != "" {
+		if check.Message != "" {
+			fmt.Printf(
+				"       Reason: %s\n",
+				check.Message,
+			)
+		}
 
+		if check.Recommendation != "" {
 			fmt.Printf(
 				"       Recommendation: %s\n",
 				check.Recommendation,
