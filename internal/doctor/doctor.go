@@ -24,9 +24,24 @@ type Report struct {
 	Checks []Check `json:"checks"`
 }
 
-func Run(cfg *config.Config) (*Report, error) {
+func Generate() (*Report, error) {
 
 	report := &Report{}
+
+	cfg := config.Default()
+
+	// Load config
+	if err := config.ReadConfig(&cfg); err != nil {
+		return nil, err
+	}
+
+	// Load token
+	_ = config.ReadToken(&cfg)
+
+	// Validate config
+	if err := cfg.Validate(); err != nil {
+		return nil, err
+	}
 
 	// Configuration
 	report.add(
@@ -99,7 +114,7 @@ func Run(cfg *config.Config) (*Report, error) {
 	// GitHub auth
 	report.add(
 		checkGitHub(
-			cfg,
+			cfg.GitHubToken,
 		),
 	)
 
@@ -207,9 +222,9 @@ func checkLogFile(path string) Check {
 	return check
 }
 
-func checkGitHub(cfg *config.Config) Check {
+func checkGitHub(token string) Check {
 
-	if cfg.GitHubToken == "" {
+	if token == "" {
 
 		return Check{
 			Name:           "github authentication",
@@ -221,7 +236,7 @@ func checkGitHub(cfg *config.Config) Check {
 
 	client, err := github.NewClient(
 		github.WithAuthToken(
-			cfg.GitHubToken,
+			token,
 		),
 	)
 

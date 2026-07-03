@@ -18,7 +18,7 @@ var doctorCmd = &cobra.Command{
 
 	RunE: func(cmd *cobra.Command, args []string) error {
 
-		cfg, err := config.Load()
+		report, err := doctor.Generate()
 
 		if err != nil {
 
@@ -31,11 +31,7 @@ var doctorCmd = &cobra.Command{
 			return nil
 		}
 
-		report, err := doctor.Run(cfg)
-
-		if err != nil {
-			return err
-		}
+		cfg := config.Default()
 
 		if err := logDoctorReport(cfg.LogFile, report); err != nil {
 
