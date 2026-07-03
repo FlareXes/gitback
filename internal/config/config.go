@@ -132,9 +132,7 @@ func Default() Config {
 	}
 }
 
-func Load() (*Config, error) {
-
-	cfg := Default()
+func ReadConfig(cfg *Config) error {
 
 	v := viper.New()
 
@@ -150,23 +148,48 @@ func Load() (*Config, error) {
 		var notFound viper.ConfigFileNotFoundError
 
 		if errors.As(err, &notFound) {
-
-			return nil, fmt.Errorf("gitback is not initialized\n\nRun: gitback init")
+			return fmt.Errorf(
+				"gitback is not initialized\n\nRun: gitback init",
+			)
 		}
 
+		return err
+	}
+
+	return v.Unmarshal(cfg)
+}
+
+func ReadToken(cfg *Config) error {
+
+	data, err := os.ReadFile(cfg.TokenFile)
+	if err != nil {
+		return err
+	}
+
+	cfg.GitHubToken = strings.TrimSpace(
+		string(data),
+	)
+
+	return nil
+}
+
+// Load reads, validates, and returns the GitBack configuration.
+//
+// Most commands should use Load().
+//
+// Lower-level helpers such as ReadConfig() and ReadToken() exist for
+// components like Doctor that need to inspect partially configured
+// installations without treating configuration problems as fatal.
+func Load() (*Config, error) {
+
+	cfg := Default()
+
+	if err := ReadConfig(&cfg); err != nil {
 		return nil, err
 	}
 
-	if err := v.Unmarshal(&cfg); err != nil {
-		return nil, err
-	}
-
-	if data, err := os.ReadFile(cfg.TokenFile); err == nil {
-
-		cfg.GitHubToken = strings.TrimSpace(
-			string(data),
-		)
-	}
+	// Missing token is handled during validation.
+	_ = ReadToken(&cfg)
 
 	if err := cfg.Validate(); err != nil {
 		return nil, err
