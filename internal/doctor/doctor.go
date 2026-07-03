@@ -13,20 +13,11 @@ import (
 	"github.com/google/go-github/v88/github"
 )
 
-type Check struct {
-	Name           string `json:"name"`
-	Success        bool   `json:"success"`
-	Recommendation string `json:"recommendation,omitempty"`
-	Message        string `json:"message,omitempty"`
-}
-
-type Report struct {
-	Checks []Check `json:"checks"`
-}
-
 func Generate() (*Report, error) {
 
-	report := &Report{}
+	report := &Report{
+		Checks: make([]Check, 0, 10),
+	}
 
 	cfg := config.Default()
 
@@ -44,7 +35,7 @@ func Generate() (*Report, error) {
 	}
 
 	// Configuration
-	report.add(
+	report.AddCheck(
 		checkFile(
 			"config.yaml",
 			cfg.ConfigDir+"/config.yaml",
@@ -52,7 +43,7 @@ func Generate() (*Report, error) {
 		),
 	)
 
-	report.add(
+	report.AddCheck(
 		checkFile(
 			"github.token",
 			cfg.TokenFile,
@@ -61,21 +52,21 @@ func Generate() (*Report, error) {
 	)
 
 	// Required binaries
-	report.add(
+	report.AddCheck(
 		checkBinary(
 			"git",
 			"Install git",
 		),
 	)
 
-	report.add(
+	report.AddCheck(
 		checkBinary(
 			"tar",
 			"Install tar",
 		),
 	)
 
-	report.add(
+	report.AddCheck(
 		checkBinary(
 			"zstd",
 			"Install zstd",
@@ -83,21 +74,21 @@ func Generate() (*Report, error) {
 	)
 
 	// Directories
-	report.add(
+	report.AddCheck(
 		checkDirectory(
 			"mirror directory",
 			cfg.MirrorDir,
 		),
 	)
 
-	report.add(
+	report.AddCheck(
 		checkDirectory(
 			"snapshot directory",
 			cfg.SnapshotDir,
 		),
 	)
 
-	report.add(
+	report.AddCheck(
 		checkDirectory(
 			"state directory",
 			cfg.StateDir,
@@ -105,28 +96,20 @@ func Generate() (*Report, error) {
 	)
 
 	// Log file writable
-	report.add(
+	report.AddCheck(
 		checkLogFile(
 			cfg.LogFile,
 		),
 	)
 
 	// GitHub auth
-	report.add(
+	report.AddCheck(
 		checkGitHub(
 			cfg.GitHubToken,
 		),
 	)
 
 	return report, nil
-}
-
-func (r *Report) add(check Check) {
-
-	r.Checks = append(
-		r.Checks,
-		check,
-	)
 }
 
 func checkBinary(name string, recommendation string) Check {
