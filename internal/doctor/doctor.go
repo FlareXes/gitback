@@ -8,6 +8,7 @@ import (
 	"fmt"
 	"os"
 	"os/exec"
+	"runtime"
 
 	"github.com/flarexes/gitback/internal/config"
 	"github.com/google/go-github/v88/github"
@@ -15,65 +16,66 @@ import (
 
 func Generate() (*Report, error) {
 
-	report := &Report{
-		Checks: make([]Check, 0, 10),
-	}
+	report := &Report{}
 
-	cfg := config.Default()
+	// ------------------------------------------------------------------
+	// Environment
+	//
+	// Verify prerequisites that are independent of the current GitBack
+	// installation.
+	// ------------------------------------------------------------------
 
-	// Load config
-	if err := config.ReadConfig(&cfg); err != nil {
-		return nil, err
-	}
-
-	// Load token
-	_ = config.ReadToken(&cfg)
-
-	// Validate config
-	if err := cfg.Validate(); err != nil {
-		return nil, err
-	}
-
-	// Configuration
 	report.AddCheck(
-		checkFile(
-			"config.yaml",
-			cfg.ConfigDir+"/config.yaml",
-			"Run: gitback init",
-		),
+		checkOperatingSystem(),
 	)
 
+	report.AddChecks(
+		checkEnvironment(),
+	)
+
+	// ------------------------------------------------------------------
+	// Installation
+	//
+	// Installation-specific diagnostics require a valid GitBack
+	// configuration. If the installation cannot be identified, return the
+	// report after completing the environment checks.
+	// ------------------------------------------------------------------
+
+	cfg, err := config.Load()
+
+	if err != nil {
+
+		report.AddCheck(
+			Check{
+				Name:           "configuration",
+				Success:        false,
+				Message:        err.Error(),
+				Recommendation: `Run "gitback init"`,
+			},
+		)
+
+		return report, nil
+	}
+
 	report.AddCheck(
 		checkFile(
-			"github.token",
+			"github.token file",
 			cfg.TokenFile,
-			"Run: gitback init",
+			`Run "gitback init"`,
 		),
 	)
 
-	// Required binaries
-	report.AddCheck(
-		checkBinary(
-			"git",
-			"Install git",
-		),
-	)
+	// ------------------------------------------------------------------
+	// Filesystem
+	// ------------------------------------------------------------------
 
 	report.AddCheck(
-		checkBinary(
-			"tar",
-			"Install tar",
+		checkWritableFile(
+			"log file",
+			cfg.LogFile,
 		),
 	)
 
-	report.AddCheck(
-		checkBinary(
-			"zstd",
-			"Install zstd",
-		),
-	)
-
-	// Directories
 	report.AddCheck(
 		checkDirectory(
 			"mirror directory",
@@ -95,14 +97,10 @@ func Generate() (*Report, error) {
 		),
 	)
 
-	// Log file writable
-	report.AddCheck(
-		checkLogFile(
-			cfg.LogFile,
-		),
-	)
+	// ------------------------------------------------------------------
+	// Connectivity
+	// ------------------------------------------------------------------
 
-	// GitHub auth
 	report.AddCheck(
 		checkGitHub(
 			cfg.GitHubToken,
@@ -112,7 +110,48 @@ func Generate() (*Report, error) {
 	return report, nil
 }
 
-func checkBinary(name string, recommendation string) Check {
+func checkOperatingSystem() Check {
+
+	if runtime.GOOS != "linux" {
+
+		return Check{
+			Name:    "operating system",
+			Success: false,
+			Message: fmt.Sprintf(
+				"%s is not currently supported",
+				runtime.GOOS,
+			),
+			Recommendation: "Run GitBack on Linux.",
+		}
+	}
+
+	return Check{
+		Name:    "operating system",
+		Success: true,
+	}
+}
+
+// checkEnvironment verifies runtime dependencies that are independent
+// of the current GitBack installation.
+func checkEnvironment() []Check {
+
+	return []Check{
+		checkExecutable(
+			"git",
+			"Install Git.",
+		),
+		checkExecutable(
+			"tar",
+			"Install tar.",
+		),
+		checkExecutable(
+			"zstd",
+			"Install zstd.",
+		),
+	}
+}
+
+func checkExecutable(name string, recommendation string) Check {
 
 	_, err := exec.LookPath(name)
 
@@ -129,40 +168,6 @@ func checkBinary(name string, recommendation string) Check {
 	return check
 }
 
-func checkDirectory(name, path string) Check {
-
-	info, err := os.Stat(path)
-
-	if err != nil {
-		return Check{
-			Name:    name,
-			Success: false,
-			Message: err.Error(),
-			Recommendation: fmt.Sprintf(
-				"Run \"gitback init\" or ensure the directory exists and is accessible: %s",
-				path,
-			),
-		}
-	}
-
-	if !info.IsDir() {
-		return Check{
-			Name:    name,
-			Success: false,
-			Message: "path exists but is not a directory",
-			Recommendation: fmt.Sprintf(
-				"Run \"gitback init\" or replace it with a directory: %s",
-				path,
-			),
-		}
-	}
-
-	return Check{
-		Name:    name,
-		Success: true,
-	}
-}
-
 func checkFile(name string, path string, recommendation string) Check {
 
 	_, err := os.Stat(path)
@@ -174,13 +179,13 @@ func checkFile(name string, path string, recommendation string) Check {
 
 	if err != nil {
 		check.Message = err.Error()
-		check.Recommendation = fmt.Sprintf(recommendation, path)
+		check.Recommendation = recommendation
 	}
 
 	return check
 }
 
-func checkLogFile(path string) Check {
+func checkWritableFile(name string, path string) Check {
 
 	file, err := os.OpenFile(
 		path,
@@ -193,16 +198,50 @@ func checkLogFile(path string) Check {
 	}
 
 	check := Check{
-		Name:    "log file writable",
+		Name:    name,
 		Success: err == nil,
 	}
 
 	if err != nil {
 		check.Message = err.Error()
-		check.Recommendation = "Ensure the log file path is writable and the parent directory exists"
+		check.Recommendation = "Ensure the file path is writable and the parent directory exists."
 	}
 
 	return check
+}
+
+func checkDirectory(name, path string) Check {
+
+	info, err := os.Stat(path)
+
+	if err != nil {
+		return Check{
+			Name:    name,
+			Success: false,
+			Message: err.Error(),
+			Recommendation: fmt.Sprintf(
+				"Ensure the directory exists and is accessible: %s",
+				path,
+			),
+		}
+	}
+
+	if !info.IsDir() {
+		return Check{
+			Name:    name,
+			Success: false,
+			Message: "path exists but is not a directory.",
+			Recommendation: fmt.Sprintf(
+				"Replace it with a directory: %s",
+				path,
+			),
+		}
+	}
+
+	return Check{
+		Name:    name,
+		Success: true,
+	}
 }
 
 func checkGitHub(token string) Check {
@@ -212,8 +251,8 @@ func checkGitHub(token string) Check {
 		return Check{
 			Name:           "github authentication",
 			Success:        false,
-			Recommendation: "Run: gitback init",
-			Message:        "GitHub token is not set",
+			Recommendation: `Run "gitback init"`,
+			Message:        "GitHub token is not set.",
 		}
 	}
 
@@ -241,6 +280,6 @@ func checkGitHub(token string) Check {
 	return Check{
 		Name:           "github authentication",
 		Success:        err == nil,
-		Recommendation: "Verify the GitHub token and its permissions",
+		Recommendation: "Verify the GitHub token and its permissions.",
 	}
 }

@@ -21,14 +21,7 @@ var doctorCmd = &cobra.Command{
 		report, err := doctor.Generate()
 
 		if err != nil {
-
-			fmt.Println("[FAIL] configuration")
-			fmt.Println(err)
-
-			fmt.Println("")
-			fmt.Println("Run: gitback init")
-
-			return nil
+			return err
 		}
 
 		cfg := config.Default()

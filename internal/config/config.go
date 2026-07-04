@@ -148,9 +148,7 @@ func ReadConfig(cfg *Config) error {
 		var notFound viper.ConfigFileNotFoundError
 
 		if errors.As(err, &notFound) {
-			return fmt.Errorf(
-				"gitback is not initialized\n\nRun: gitback init",
-			)
+			return err
 		}
 
 		return err
