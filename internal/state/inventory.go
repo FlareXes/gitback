@@ -1,3 +1,5 @@
+// internal/state/inventory.go
+
 package state
 
 import (
