@@ -6,7 +6,6 @@ import (
 	"context"
 	"sync"
 
-	"github.com/flarexes/gitback/internal/logging"
 	"github.com/flarexes/gitback/internal/state"
 )
 
@@ -28,12 +27,6 @@ func (e *Engine) worker(
 	for asset := range jobs {
 
 		if err := syncFn(ctx, asset); err != nil {
-
-			e.logger.Error(
-				logging.Events.Sync.Failed,
-				asset,
-				err,
-			)
 
 			results <- state.Asset{
 				Name:        asset,
