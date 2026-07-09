@@ -46,9 +46,6 @@ func (e *Engine) Sync(ctx context.Context) error {
 	printSyncSummary("Repositories", repositories)
 	printSyncSummary("Gists", gists)
 
-	// Log sync summary
-	e.logSyncSummary(syncStartedAt, repositories, gists)
-
 	syncCompletedAt := time.Now()
 
 	// Save assets metadata such URL with their failed/success status
@@ -65,7 +62,12 @@ func (e *Engine) Sync(ctx context.Context) error {
 			"",
 			err,
 		)
+
+		return err
 	}
+
+	// Log sync summary
+	e.logSyncSummary(syncStartedAt, repositories, gists)
 
 	return nil
 }

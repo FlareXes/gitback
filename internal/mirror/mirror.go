@@ -168,19 +168,24 @@ func (e *Engine) updateMirror(ctx context.Context, target string) error {
 
 	if output, err := fsck.CombinedOutput(); err != nil {
 
+		fsckErr := fmt.Errorf(
+			"git fsck: %s",
+			strings.TrimSpace(string(output)),
+		)
+
 		e.logger.Error(
 			logging.Events.Mirror.FsckFailed,
 			repoName,
-			fmt.Errorf("%s", string(output)),
+			fsckErr,
 		)
 
-	} else {
-
-		e.logger.Info(
-			logging.Events.Mirror.FsckCompleted,
-			repoName,
-		)
+		return fsckErr
 	}
+
+	e.logger.Info(
+		logging.Events.Mirror.FsckCompleted,
+		repoName,
+	)
 
 	e.logger.Duration(
 		logging.Events.Mirror.UpdateCompleted,
