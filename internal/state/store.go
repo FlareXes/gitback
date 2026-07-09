@@ -4,8 +4,11 @@ package state
 
 import (
 	"encoding/json"
+	"io"
 	"os"
 	"time"
+
+	"github.com/flarexes/gitback/internal/filesystem"
 )
 
 func Save(
@@ -33,17 +36,17 @@ func Save(
 		Gists:        gists,
 	}
 
-	file, err := os.Create(path)
-	if err != nil {
-		return err
-	}
+	return filesystem.AtomicWriteFile(
+		path,
+		0600,
+		func(w io.Writer) error {
 
-	defer file.Close()
+			encoder := json.NewEncoder(w)
+			encoder.SetIndent("", "  ")
 
-	encoder := json.NewEncoder(file)
-	encoder.SetIndent("", "  ")
-
-	return encoder.Encode(data)
+			return encoder.Encode(data)
+		},
+	)
 }
 
 func Load(path string) (*Mirrors, error) {

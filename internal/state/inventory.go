@@ -5,39 +5,35 @@ package state
 import (
 	"bufio"
 	"fmt"
+	"io"
 	"os"
 	"strings"
+
+	"github.com/flarexes/gitback/internal/filesystem"
 )
 
 func WriteInventory(path string, items []string) error {
 
-	f, err := os.OpenFile(
+	return filesystem.AtomicWriteFile(
 		path,
-		os.O_CREATE|os.O_WRONLY|os.O_TRUNC,
 		0600,
+		func(w io.Writer) error {
+
+			for _, item := range items {
+
+				if _, err := fmt.Fprintln(w, item); err != nil {
+
+					return fmt.Errorf(
+						"write inventory file %s: %w",
+						path,
+						err,
+					)
+				}
+			}
+
+			return nil
+		},
 	)
-
-	if err != nil {
-		return fmt.Errorf("open inventory file %s: %w",
-			path,
-			err,
-		)
-	}
-
-	defer f.Close()
-
-	for _, item := range items {
-
-		if _, err := fmt.Fprintln(f, item); err != nil {
-
-			return fmt.Errorf("write inventory file %s: %w",
-				path,
-				err,
-			)
-		}
-	}
-
-	return nil
 }
 
 func ReadInventory(path string) ([]string, error) {
