@@ -52,7 +52,7 @@ func (e *Engine) Sync(ctx context.Context) error {
 	syncCompletedAt := time.Now()
 
 	// Save assets metadata such URL with their failed/success status
-	if err := state.Save(
+	if err := state.SaveMirrors(
 		e.cfg.MirrorsStateFile,
 		syncStartedAt,
 		syncCompletedAt,

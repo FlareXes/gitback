@@ -8,7 +8,7 @@ type Asset struct {
 	Error       string `json:"error,omitempty"`
 }
 
-type Mirrors struct {
+type MirrorState struct {
 	GeneratedAt     string `json:"generated_at"`
 	SyncStartedAt   string `json:"sync_started_at,omitempty"`
 	SyncCompletedAt string `json:"sync_completed_at,omitempty"`

@@ -4,6 +4,7 @@ package state
 
 import (
 	"encoding/json"
+	"fmt"
 	"io"
 	"os"
 	"time"
@@ -11,7 +12,7 @@ import (
 	"github.com/flarexes/gitback/internal/filesystem"
 )
 
-func Save(
+func SaveMirrors(
 	path string,
 	syncStartedAt time.Time,
 	syncCompletedAt time.Time,
@@ -19,7 +20,7 @@ func Save(
 	gists []Asset,
 ) error {
 
-	data := Mirrors{
+	data := MirrorState{
 		GeneratedAt: time.Now().
 			UTC().
 			Format(time.RFC3339),
@@ -49,19 +50,28 @@ func Save(
 	)
 }
 
-func Load(path string) (*Mirrors, error) {
+func LoadMirrors(path string) (*MirrorState, error) {
 
 	file, err := os.Open(path)
+
 	if err != nil {
-		return nil, err
+		return nil, fmt.Errorf(
+			"open mirror state %s: %w",
+			path,
+			err,
+		)
 	}
 
 	defer file.Close()
 
-	var data Mirrors
+	var data MirrorState
 
 	if err := json.NewDecoder(file).Decode(&data); err != nil {
-		return nil, err
+		return nil, fmt.Errorf(
+			"load mirror state %s: %w",
+			path,
+			err,
+		)
 	}
 
 	return &data, nil

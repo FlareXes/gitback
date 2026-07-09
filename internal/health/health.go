@@ -56,7 +56,7 @@ func Generate(cfg *config.Config) (*HealthReport, error) {
 
 func populateAssets(cfg *config.Config, report *HealthReport) error {
 
-	data, err := state.Load(
+	data, err := state.LoadMirrors(
 		cfg.MirrorsStateFile,
 	)
 

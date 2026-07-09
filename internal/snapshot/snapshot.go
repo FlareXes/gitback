@@ -225,7 +225,7 @@ func (e *Engine) verifyMirrors() error {
 		"",
 	)
 
-	data, err := state.Load(e.cfg.MirrorsStateFile)
+	data, err := state.LoadMirrors(e.cfg.MirrorsStateFile)
 
 	if err != nil {
 
