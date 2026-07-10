@@ -37,14 +37,22 @@ func (e *Engine) Sync(ctx context.Context) error {
 	}
 
 	// Sync Gists
-	gists, err := e.syncGists(ctx)
+	var gists []state.Asset
 
-	if err != nil {
-		return err
+	if e.cfg.BackupGists {
+
+		gists, err = e.syncGists(ctx)
+
+		if err != nil {
+			return err
+		}
 	}
 
 	printSyncSummary("Repositories", repositories)
-	printSyncSummary("Gists", gists)
+
+	if e.cfg.BackupGists {
+		printSyncSummary("Gists", gists)
+	}
 
 	syncCompletedAt := time.Now()
 
@@ -113,6 +121,7 @@ func (e *Engine) logSyncSummary(
 				"repositories_healthy": repositoryHealthy,
 				"repositories_failed":  repositoryFailed,
 
+				"gists_enabled": e.cfg.BackupGists,
 				"gists_total":   len(gists),
 				"gists_healthy": gistHealthy,
 				"gists_failed":  gistFailed,
