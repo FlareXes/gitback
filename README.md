@@ -1,33 +1,40 @@
 # GitBack
 
-Simple, transparent GitHub repository and Gist backups.
+Reliable, unattended GitHub backup designed for long-term operation.
 
-GitBack discovers repositories and gists from GitHub, maintains local mirrors, and creates compressed snapshots for long-term storage. It is designed to run unattended while remaining easy to inspect, troubleshoot, and recover from.
+GitBack is a command-line utility that creates and maintains local mirror backups of GitHub repositories and gists.
+
+Unlike traditional backup scripts, GitBack is designed to run continuously as a scheduled job with an emphasis on reliability, operational visibility, and recoverability.
 
 ## Features
 
-* Backup GitHub repositories
-* Backup GitHub Gists
-* Concurrent repository synchronization
-* Compressed snapshots (`tar + zstd`)
-* SHA256 checksum generation and verification
-* Structured JSON logging
-* Health reporting
-* Environment diagnostics
-* Snapshot retention
-* No database
-* No daemon
-* No proprietary formats    
+- Backup GitHub repositories
+- Backup GitHub gists (optional)
+- Incremental concurrent synchronization
+- Snapshot creation
+- Repository integrity verification
+- Health reporting
+- Environment diagnostics
+- Structured JSON logging
+- Atomic state persistence
 
-## Installation
+# Installation
 
-### Go Install
+### Pre-requisites
+
+- git
+
+- tar
+
+- zstd
+
+### Install
 
 ```bash
 go install github.com/flarexes/gitback/cmd/gitback@latest
 ```
 
-### Build From Source
+### Build From Source (Unstable)
 
 ```bash
 git clone https://github.com/flarexes/gitback.git
@@ -37,86 +44,84 @@ cd gitback
 go build -o gitback ./cmd/gitback
 ```
 
-## Requirements
+# Commands
 
-Required tools:
+## Initialize
 
-- git
-    
-- tar
-    
-- zstd
-    
-
-Verify your environment:
-
-```bash
-gitback doctor
-```
-
-## Commands
-
-### Initialize
+Creates configuration and validates GitHub authentication.
 
 ```bash
 gitback init
 ```
 
-Creates configuration and validates GitHub authentication.
+## Discover
 
-### Discover
+Discovers repositories and gists accessible to the configured GitHub account.
 
 ```bash
 gitback discover
 ```
 
-Discovers repositories and gists accessible to the configured GitHub account.
+## Sync
 
-### Sync
+Creates and updates local Git mirrors.
 
 ```bash
 gitback sync
 ```
 
-Creates and updates local Git mirrors.
+## Snapshot
 
-### Snapshot
+Creates a compressed archive containing all mirrored repositories, gists, and backup state.
 
 ```bash
 gitback snapshot
 ```
 
-Creates a compressed archive containing all mirrored repositories, gists, and backup state.
+**Force Mode:**
 
-Force mode:
+By default, GitBack refuses to create a snapshot when synchronization failures are detected from the last `gitback sync`. Use `--force` to create a snapshot anyway.
 
 ```bash
 gitback snapshot --force
 ```
 
-Continues snapshot creation even if repository or gist synchronization previously failed.
+## Health
 
-### Health
+The `health` command reports the current state of a backup installation, including:
+
+- Repository statistics
+- Gist statistics
+- Snapshot information
+- Warnings
+- Recommendations
 
 ```bash
 gitback health
 ```
 
-Displays repository status, snapshot information, storage usage, and recommendations.
+## Doctor
 
-### Doctor
+The `doctor` command validates whether GitBack is able to perform backups.
+
+It verifies:
+
+- Supported operating system
+- Required executables
+- Configuration
+- Authentication
+- Required directories
+- Log file accessibility
 
 ```bash
 gitback doctor
 ```
 
-Performs environment and configuration checks. Recommendation after initialization, `gitback init`.
-
-## GitHub Token Permissions
+# GitHub Token Permissions
 
 GitBack supports either a **Classic Personal Access Token** or a **Fine-Grained Personal Access Token**.
 
-### Classic PAT
+## Classic PAT
 
 Scope:
 
@@ -124,7 +129,7 @@ Scope:
 repo
 ```
 
-### Fine-Grained PAT
+## Fine-Grained PAT
 
 Repository Access:
 
@@ -141,57 +146,19 @@ Metadata: Read-only
 
 Any one token type is required.
 
-## Directory Layout
+# Logging
 
-Configuration:
+GitBack writes structured JSON logs intended for machine consumption and easy to investigate manually.
 
-```text
-~/.config/gitback/
-└── config.yaml
-```
+Every log entry contains structured fields describing the operation, making logs suitable for:
 
-Data:
+- SIEM platforms
+- Centralized logging
+- Incident investigation
+- Automation
+- Long-term auditing
 
-```text
-~/.local/share/gitback/
-├── mirrors/
-│   ├── repositories/
-│   └── gists/
-├── snapshots/
-└── state/
-    ├── github.token
-    ├── repositories.txt
-    ├── gists.txt
-    └── mirrors.json
-```
-
-Runtime state:
-
-```text
-~/.local/state/gitback/
-└── gitback.log
-```
-
-```text
-/tmp/gitback.lock
-```
-
-## Logging
-
-GitBack produces structured JSON logs.
-
-Example:
-
-```json
-{
-  "timestamp": "2026-06-07T10:00:00Z",
-  "run_id": "7b3f4a1c",
-  "level": "info",
-  "event": "sync_completed"
-}
-```
-
-## Snapshots
+# Snapshots
 
 Snapshots are stored as:
 
@@ -218,7 +185,7 @@ Retains the newest 30 snapshots. Retention is disabled by default (`0 or < 1`).
 
 GitBack also generates SHA256 checksum files alongside snapshots.
 
-## Automation
+# Automation
 
 Typical unattended workflow:
 
@@ -235,9 +202,8 @@ Can be scheduled using:
 - systemd timers
     
 - CI/CD pipelines
-    
 
-## Roadmap
+# Roadmap
 
 - [ ] Windows and macOS support
     
@@ -251,8 +217,12 @@ Can be scheduled using:
 
 - [ ] Wiki backups
 
+- [ ] Improved mirror self-healing
 
-## Contributing
+- [ ] Additional health diagnostics
+
+
+# Contributing
 
 Bug reports, feature requests, and pull requests are welcome.
 
@@ -265,13 +235,13 @@ Please keep contributions aligned with the project's core principles:
 - Reliability
     
 
-## License
+# License
 
 BSD 3-Clause License.
 
 See [LICENSE](LICENSE) for details.
 
-## Why GitBack?
+# Why GitBack?
 
 GitBack is built to solve a straightforward problem: reliably backing up Git repositories without unnecessary complexity.
 
