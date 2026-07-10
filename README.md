@@ -18,7 +18,7 @@ Unlike traditional backup scripts, GitBack is designed to run continuously as a 
 - Structured JSON logging
 - Atomic state persistence
 
-# Installation
+## Installation
 
 ### Pre-requisites
 
@@ -44,9 +44,9 @@ cd gitback
 go build -o gitback ./cmd/gitback
 ```
 
-# Commands
+## Commands
 
-## Initialize
+### Initialize
 
 Creates configuration and validates GitHub authentication.
 
@@ -54,7 +54,7 @@ Creates configuration and validates GitHub authentication.
 gitback init
 ```
 
-## Discover
+### Discover
 
 Discovers repositories and gists accessible to the configured GitHub account.
 
@@ -62,7 +62,7 @@ Discovers repositories and gists accessible to the configured GitHub account.
 gitback discover
 ```
 
-## Sync
+### Sync
 
 Creates and updates local Git mirrors.
 
@@ -70,7 +70,7 @@ Creates and updates local Git mirrors.
 gitback sync
 ```
 
-## Snapshot
+### Snapshot
 
 Creates a compressed archive containing all mirrored repositories, gists, and backup state.
 
@@ -86,7 +86,7 @@ By default, GitBack refuses to create a snapshot when synchronization failures a
 gitback snapshot --force
 ```
 
-## Health
+### Health
 
 The `health` command reports the current state of a backup installation, including:
 
@@ -100,7 +100,7 @@ The `health` command reports the current state of a backup installation, includi
 gitback health
 ```
 
-## Doctor
+### Doctor
 
 The `doctor` command validates whether GitBack is able to perform backups.
 
@@ -117,11 +117,11 @@ It verifies:
 gitback doctor
 ```
 
-# GitHub Token Permissions
+## GitHub Token Permissions
 
 GitBack supports either a **Classic Personal Access Token** or a **Fine-Grained Personal Access Token**.
 
-## Classic PAT
+### Classic PAT
 
 Scope:
 
@@ -129,7 +129,7 @@ Scope:
 repo
 ```
 
-## Fine-Grained PAT
+### Fine-Grained PAT
 
 Repository Access:
 
@@ -146,7 +146,7 @@ Metadata: Read-only
 
 Any one token type is required.
 
-# Logging
+## Logging
 
 GitBack writes structured JSON logs intended for machine consumption and easy to investigate manually.
 
@@ -158,7 +158,7 @@ Every log entry contains structured fields describing the operation, making logs
 - Automation
 - Long-term auditing
 
-# Snapshots
+## Snapshots
 
 Snapshots are stored as:
 
@@ -185,7 +185,7 @@ Retains the newest 30 snapshots. Retention is disabled by default (`0 or < 1`).
 
 GitBack also generates SHA256 checksum files alongside snapshots.
 
-# Automation
+## Automation
 
 Typical unattended workflow:
 
@@ -203,7 +203,7 @@ Can be scheduled using:
     
 - CI/CD pipelines
 
-# Roadmap
+## Roadmap
 
 - [ ] Windows and macOS support
     
@@ -222,7 +222,7 @@ Can be scheduled using:
 - [ ] Additional health diagnostics
 
 
-# Contributing
+## Contributing
 
 Bug reports, feature requests, and pull requests are welcome.
 
@@ -235,13 +235,13 @@ Please keep contributions aligned with the project's core principles:
 - Reliability
     
 
-# License
+## License
 
 BSD 3-Clause License.
 
 See [LICENSE](LICENSE) for details.
 
-# Why GitBack?
+## Why GitBack?
 
 GitBack is built to solve a straightforward problem: reliably backing up Git repositories without unnecessary complexity.
 
