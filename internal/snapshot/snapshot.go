@@ -307,13 +307,13 @@ func (e *Engine) createTar(ctx context.Context, output string) error {
 		output,
 
 		"-C",
-		e.cfg.DataDir,
+		filepath.Dir(e.cfg.MirrorDir),
 
-		"mirrors",
+		filepath.Base(e.cfg.MirrorDir),
 
 		filepath.Join(
-			"state",
-			"mirrors.json",
+			filepath.Base(e.cfg.StateDir),
+			filepath.Base(e.cfg.MirrorsStateFile),
 		),
 	)
 
