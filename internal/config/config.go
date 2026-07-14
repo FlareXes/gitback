@@ -3,7 +3,6 @@
 package config
 
 import (
-	"errors"
 	"fmt"
 	"os"
 	"path/filepath"
@@ -14,122 +13,155 @@ import (
 )
 
 type Config struct {
+	GitHub   GitHubConfig
+	Storage  StorageConfig
+	Sync     SyncConfig
+	Snapshot SnapshotConfig
+	Health   HealthConfig
+}
 
-	// Loaded from TokenFile during Load().
-	GitHubToken string
-
-	TokenFile string `mapstructure:"token_file"`
-
-	ConfigDir string `mapstructure:"config_dir"`
-
-	DataDir string `mapstructure:"data_dir"`
-
-	StateDir         string `mapstructure:"state_dir"`
-	MirrorsStateFile string `mapstructure:"mirrors_state_file"`
-
-	MirrorDir   string `mapstructure:"mirror_dir"`
-	SnapshotDir string `mapstructure:"snapshot_dir"`
-
-	LogDir  string `mapstructure:"log_dir"`
-	LogFile string `mapstructure:"log_file"`
-
-	TempDir string `mapstructure:"temp_dir"`
-
-	LockFile string `mapstructure:"lock_file"`
-
-	MinimumFreeDiskPercent int `mapstructure:"minimum_free_disk_percent"`
-
-	GitRetryAttempts int `mapstructure:"git_retry_attempts"`
-	SyncWorkers      int `mapstructure:"sync_workers"`
-
-	SnapshotRetention int `mapstructure:"snapshot_retention"`
-
+type GitHubConfig struct {
 	BackupGists bool `mapstructure:"backup_gists"`
 }
 
+type StorageConfig struct {
+	MirrorRoot string `mapstructure:"mirror_root"`
+}
+
+type SnapshotConfig struct {
+	OutputDirectory string `mapstructure:"output_directory"`
+
+	Retention int `mapstructure:"retention"`
+}
+
+type SyncConfig struct {
+	Workers int `mapstructure:"workers"`
+
+	RetryAttempts int `mapstructure:"retry_attempts"`
+}
+
+type HealthConfig struct {
+	MinimumFreeDiskPercent int `mapstructure:"minimum_free_disk_percent"`
+}
+
+// Default returns the default configuration.
 func Default() Config {
+	home, _ := os.UserHomeDir()
+
+	return Config{
+		GitHub: GitHubConfig{
+			BackupGists: true,
+		},
+
+		Storage: StorageConfig{
+			MirrorRoot: filepath.Join(
+				home,
+				".local",
+				"share",
+				"gitback",
+				"mirrors",
+			),
+		},
+
+		Snapshot: SnapshotConfig{
+			OutputDirectory: filepath.Join(
+				home,
+				".local",
+				"share",
+				"gitback",
+				"snapshots",
+			),
+
+			Retention: 0,
+		},
+
+		Sync: SyncConfig{
+			Workers: 3,
+
+			RetryAttempts: 3,
+		},
+
+		Health: HealthConfig{
+			MinimumFreeDiskPercent: 20,
+		},
+	}
+}
+
+// ----------------------------------
+// Private helper functions.
+// ----------------------------------
+
+// configDirectory returns the configuration directory.
+// Because configuration location is not configurable, it is hardcoded.
+func configDirectory() string {
 
 	home, err := os.UserHomeDir()
+
 	if err != nil {
-		home = "."
+		return "."
 	}
 
-	configDir := filepath.Join(
+	return filepath.Join(
 		home,
 		".config",
 		"gitback",
 	)
+}
 
-	dataDir := filepath.Join(
+// stateDir returns the state directory.
+// Because state location is not configurable, it is hardcoded.
+func stateDir() string {
+
+	home, err := os.UserHomeDir()
+
+	if err != nil {
+		home = "."
+	}
+
+	return filepath.Join(
 		home,
 		".local",
 		"share",
 		"gitback",
+		"state",
 	)
+}
 
-	logDir := filepath.Join(
+// logDir returns the log directory.
+// Because log location is not configurable, it is hardcoded.
+func logDir() string {
+
+	home, err := os.UserHomeDir()
+
+	if err != nil {
+		home = "."
+	}
+
+	return filepath.Join(
 		home,
 		".local",
 		"state",
 		"gitback",
 	)
+}
 
-	return Config{
+// ----------------------------------
+// Public methods.
+// ----------------------------------
 
-		ConfigDir: configDir,
+func Load() (*Config, error) {
 
-		DataDir: dataDir,
+	cfg := Default()
 
-		LogDir: logDir,
-
-		LogFile: filepath.Join(
-			logDir,
-			"gitback.log",
-		),
-
-		StateDir: filepath.Join(
-			dataDir,
-			"state",
-		),
-
-		MirrorDir: filepath.Join(
-			dataDir,
-			"mirrors",
-		),
-
-		SnapshotDir: filepath.Join(
-			dataDir,
-			"snapshots",
-		),
-
-		MirrorsStateFile: filepath.Join(
-			dataDir,
-			"state",
-			"mirrors.json",
-		),
-
-		TokenFile: filepath.Join(
-			dataDir,
-			"state",
-			"github.token",
-		),
-
-		TempDir: filepath.Join(
-			dataDir,
-			"tmp",
-		),
-
-		LockFile: "/tmp/gitback.lock",
-
-		MinimumFreeDiskPercent: 20,
-
-		GitRetryAttempts: 3,
-		SyncWorkers:      3,
-
-		SnapshotRetention: 0, // if <= 0: disabled
-
-		BackupGists: true,
+	if err := ReadConfig(&cfg); err != nil {
+		return nil, err
 	}
+
+	if err := cfg.Validate(); err != nil {
+		return nil, err
+	}
+
+	return &cfg, nil
 }
 
 func ReadConfig(cfg *Config) error {
@@ -139,159 +171,88 @@ func ReadConfig(cfg *Config) error {
 	v.SetConfigName("config")
 	v.SetConfigType("yaml")
 
-	v.AddConfigPath(cfg.ConfigDir)
+	v.AddConfigPath(configDirectory())
 
 	v.AutomaticEnv()
 
 	if err := v.ReadInConfig(); err != nil {
-
-		var notFound viper.ConfigFileNotFoundError
-
-		if errors.As(err, &notFound) {
-			return err
-		}
-
 		return err
 	}
 
 	return v.Unmarshal(cfg)
 }
 
-func ReadToken(cfg *Config) error {
+func ReadToken(path string) (string, error) {
 
-	data, err := os.ReadFile(cfg.TokenFile)
+	data, err := os.ReadFile(path)
 	if err != nil {
-		return err
+		return "", err
 	}
 
-	cfg.GitHubToken = strings.TrimSpace(
-		string(data),
-	)
-
-	return nil
+	return strings.TrimSpace(string(data)), nil
 }
 
-// Load reads, validates, and returns the GitBack configuration.
-//
-// Most commands should use Load().
-//
-// Lower-level helpers such as ReadConfig() and ReadToken() exist for
-// components like Doctor that need to inspect partially configured
-// installations without treating configuration problems as fatal.
-func Load() (*Config, error) {
+func LogFile() string {
 
-	cfg := Default()
-
-	if err := ReadConfig(&cfg); err != nil {
-		return nil, err
-	}
-
-	// Missing token is handled during validation.
-	_ = ReadToken(&cfg)
-
-	if err := cfg.Validate(); err != nil {
-		return nil, err
-	}
-
-	return &cfg, nil
-}
-
-func Write(path string, cfg Config) error {
-
-	content := fmt.Sprintf(`token_file: %s
-
-config_dir: %s
-
-data_dir: %s
-
-state_dir: %s
-mirrors_state_file: %s
-
-mirror_dir: %s
-
-snapshot_dir: %s
-
-log_dir: %s
-log_file: %s
-
-temp_dir: %s
-
-lock_file: %s
-
-minimum_free_disk_percent: %d
-
-git_retry_attempts: %d
-sync_workers: %d
-
-snapshot_retention: %d
-
-backup_gists: %t
-`,
-		cfg.TokenFile,
-
-		cfg.ConfigDir,
-
-		cfg.DataDir,
-
-		cfg.StateDir,
-		cfg.MirrorsStateFile,
-
-		cfg.MirrorDir,
-		cfg.SnapshotDir,
-
-		cfg.LogDir,
-		cfg.LogFile,
-
-		cfg.TempDir,
-
-		cfg.LockFile,
-
-		cfg.MinimumFreeDiskPercent,
-
-		cfg.GitRetryAttempts,
-		cfg.SyncWorkers,
-
-		cfg.SnapshotRetention,
-
-		cfg.BackupGists,
-	)
-
-	return os.WriteFile(
-		path,
-		[]byte(content),
-		0600,
-	)
-}
-
-func (c *Config) RepositoryMirrorDir() string {
 	return filepath.Join(
-		c.MirrorDir,
-		"repositories",
+		logDir(),
+		"gitback.log",
 	)
 }
 
-func (c *Config) GistMirrorDir() string {
+func TokenFile() string {
+
 	return filepath.Join(
-		c.MirrorDir,
-		"gists",
+		stateDir(),
+		"github.token",
 	)
 }
 
-func (c *Config) RepositoryInventoryFile() string {
+func MirrorsStateFile() string {
+
 	return filepath.Join(
-		c.StateDir,
+		stateDir(),
+		"mirrors.json",
+	)
+}
+
+func RepositoryInventoryFile() string {
+
+	return filepath.Join(
+		stateDir(),
 		"repositories.txt",
 	)
 }
 
-func (c *Config) GistInventoryFile() string {
+func GistInventoryFile() string {
+
 	return filepath.Join(
-		c.StateDir,
+		stateDir(),
 		"gists.txt",
 	)
 }
 
-// EnsureDirectories creates all runtime directories required by GitBack.
+func TempDir() string {
+
+	return filepath.Join(
+		stateDir(),
+		"tmp",
+	)
+}
+
+func LockFile() string {
+
+	return filepath.Join(
+		os.TempDir(),
+		"gitback.lock",
+	)
+}
+
+// --------------------------------------
+// Helper functions.
+// --------------------------------------
+
+// EnsureRuntimeDirectories creates all runtime directories required by GitBack.
 //
 // Missing directories are treated as a recoverable condition.
 // This allows commands such as:
@@ -306,23 +267,21 @@ func (c *Config) GistInventoryFile() string {
 //	~/.local/share/gitback/snapshots
 //
 // were accidentally removed.
-func (cfg *Config) EnsureDirectories() error {
+func (cfg *Config) EnsureRuntimeDirectories() error {
 
 	dirs := []string{
-		cfg.DataDir,
+		cfg.Storage.MirrorRoot,
 
-		cfg.MirrorDir,
-		cfg.RepositoryMirrorDir(),
-		cfg.GistMirrorDir(),
+		cfg.Snapshot.OutputDirectory,
 
-		cfg.StateDir,
+		TempDir(),
 
-		cfg.TempDir,
+		stateDir(),
 
-		cfg.SnapshotDir,
+		logDir(),
 	}
 
-	logger, err := logging.New(cfg.LogFile)
+	logger, err := logging.New(LogFile())
 	if err != nil {
 		return err
 	}
