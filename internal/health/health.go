@@ -22,8 +22,8 @@ func Generate(cfg *config.Config) (*HealthReport, error) {
 		Status: "healthy",
 
 		Retention: RetentionHealth{
-			Enabled: cfg.SnapshotRetention > 0,
-			Keep:    cfg.SnapshotRetention,
+			Enabled: cfg.Snapshot.Retention > 0,
+			Keep:    cfg.Snapshot.Retention,
 		},
 	}
 
@@ -57,7 +57,7 @@ func Generate(cfg *config.Config) (*HealthReport, error) {
 func populateAssets(cfg *config.Config, report *HealthReport) error {
 
 	data, err := state.LoadMirrors(
-		cfg.MirrorsStateFile,
+		config.MirrorsStateFile(),
 	)
 
 	if err != nil {
@@ -93,17 +93,19 @@ func populateAssets(cfg *config.Config, report *HealthReport) error {
 		}
 	}
 
-	for _, gist := range data.Gists {
+	if cfg.GitHub.BackupGists {
+		for _, gist := range data.Gists {
 
-		report.Gists.Total++
+			report.Gists.Total++
 
-		if gist.LastSuccess {
+			if gist.LastSuccess {
 
-			report.Gists.Healthy++
+				report.Gists.Healthy++
 
-		} else {
+			} else {
 
-			report.Gists.Failed++
+				report.Gists.Failed++
+			}
 		}
 	}
 
@@ -113,7 +115,7 @@ func populateAssets(cfg *config.Config, report *HealthReport) error {
 func populateSnapshots(cfg *config.Config, report *HealthReport) error {
 
 	entries, err := os.ReadDir(
-		cfg.SnapshotDir,
+		cfg.Snapshot.OutputDirectory,
 	)
 
 	if err != nil {
@@ -167,12 +169,18 @@ func populateSnapshots(cfg *config.Config, report *HealthReport) error {
 	return nil
 }
 
+// TODO: Re-implmement disk check
+// 1. Check snapshots and mirrors
+// 2. Handle multi-disk / partition scenarios
+// 3. Calculate total usage across all disks
+// 4. Snapshots are optional
+// Note: maybe just calc disk storage and avoid backup size calc
 func populateDisk(cfg *config.Config, report *HealthReport) error {
 
 	var stat syscall.Statfs_t
 
 	if err := syscall.Statfs(
-		cfg.DataDir,
+		cfg.Storage.MirrorRoot,
 		&stat,
 	); err != nil {
 
@@ -197,7 +205,7 @@ func populateDisk(cfg *config.Config, report *HealthReport) error {
 		)
 
 	report.Disk.MinimumPercent =
-		cfg.MinimumFreeDiskPercent
+		cfg.Health.MinimumFreeDiskPercent
 
 	return nil
 }
@@ -212,7 +220,7 @@ func updateStatus(cfg *config.Config, report *HealthReport) {
 	}
 
 	if report.Disk.FreePercent <
-		cfg.MinimumFreeDiskPercent {
+		cfg.Health.MinimumFreeDiskPercent {
 
 		report.Status = "critical"
 	}
@@ -234,7 +242,7 @@ func populateWarnings(cfg *config.Config, report *HealthReport) {
 	}
 
 	if report.Disk.FreePercent <
-		cfg.MinimumFreeDiskPercent {
+		cfg.Health.MinimumFreeDiskPercent {
 
 		report.Warnings = append(
 			report.Warnings,
@@ -242,7 +250,7 @@ func populateWarnings(cfg *config.Config, report *HealthReport) {
 		)
 	}
 
-	if cfg.SnapshotRetention == 1 {
+	if cfg.Snapshot.Retention == 1 {
 
 		report.Warnings = append(
 			report.Warnings,
@@ -259,12 +267,12 @@ func populateRecommendations(cfg *config.Config, report *HealthReport) {
 			report.Recommendations,
 			fmt.Sprintf(
 				"run gitback sync and inspect %s",
-				cfg.MirrorsStateFile,
+				config.MirrorsStateFile(),
 			),
 		)
 	}
 
-	if report.Disk.FreePercent < cfg.MinimumFreeDiskPercent {
+	if report.Disk.FreePercent < cfg.Health.MinimumFreeDiskPercent {
 
 		report.Recommendations = append(
 			report.Recommendations,

@@ -60,7 +60,7 @@ func Generate() (*Report, error) {
 	report.AddCheck(
 		checkFile(
 			"github.token file",
-			cfg.TokenFile,
+			config.TokenFile(),
 			`Run "gitback init"`,
 		),
 	)
@@ -72,28 +72,28 @@ func Generate() (*Report, error) {
 	report.AddCheck(
 		checkWritableFile(
 			"log file",
-			cfg.LogFile,
-		),
-	)
-
-	report.AddCheck(
-		checkDirectory(
-			"mirror directory",
-			cfg.MirrorDir,
-		),
-	)
-
-	report.AddCheck(
-		checkDirectory(
-			"snapshot directory",
-			cfg.SnapshotDir,
+			config.LogFile(),
 		),
 	)
 
 	report.AddCheck(
 		checkDirectory(
 			"state directory",
-			cfg.StateDir,
+			config.StateDir(),
+		),
+	)
+
+	report.AddCheck(
+		checkDirectory(
+			"mirror directory",
+			cfg.Storage.MirrorRoot,
+		),
+	)
+
+	report.AddCheck(
+		checkDirectory(
+			"snapshot directory",
+			cfg.Snapshot.OutputDirectory,
 		),
 	)
 
@@ -101,10 +101,10 @@ func Generate() (*Report, error) {
 	// Connectivity
 	// ------------------------------------------------------------------
 
+	token, _ := config.ReadToken()
+
 	report.AddCheck(
-		checkGitHub(
-			cfg.GitHubToken,
-		),
+		checkGitHub(token),
 	)
 
 	return report, nil
