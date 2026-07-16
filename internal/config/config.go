@@ -108,9 +108,9 @@ func configDirectory() string {
 	)
 }
 
-// stateDir returns the state directory.
+// StateDir returns the state directory.
 // Because state location is not configurable, it is hardcoded.
-func stateDir() string {
+func StateDir() string {
 
 	home, err := os.UserHomeDir()
 
@@ -149,6 +149,48 @@ func logDir() string {
 // Public methods.
 // ----------------------------------
 
+// Write writes the GitBack configuration file.
+func Write(path string, cfg Config) error {
+
+	content := fmt.Sprintf(`# GitBack configuration
+
+[github]
+backup_gists = %t
+
+[storage]
+mirror_root = %q
+
+[snapshot]
+output_directory = %q
+retention = %d
+
+[sync]
+workers = %d
+retry_attempts = %d
+
+[health]
+minimum_free_disk_percent = %d
+`,
+		cfg.GitHub.BackupGists,
+
+		cfg.Storage.MirrorRoot,
+
+		cfg.Snapshot.OutputDirectory,
+		cfg.Snapshot.Retention,
+
+		cfg.Sync.Workers,
+		cfg.Sync.RetryAttempts,
+
+		cfg.Health.MinimumFreeDiskPercent,
+	)
+
+	return os.WriteFile(
+		path,
+		[]byte(content),
+		0600,
+	)
+}
+
 func Load() (*Config, error) {
 
 	cfg := Default()
@@ -168,10 +210,7 @@ func ReadConfig(cfg *Config) error {
 
 	v := viper.New()
 
-	v.SetConfigName("config")
-	v.SetConfigType("yaml")
-
-	v.AddConfigPath(configDirectory())
+	v.SetConfigFile(ConfigFile())
 
 	v.AutomaticEnv()
 
@@ -182,14 +221,23 @@ func ReadConfig(cfg *Config) error {
 	return v.Unmarshal(cfg)
 }
 
-func ReadToken(path string) (string, error) {
+func ReadToken() (string, error) {
 
-	data, err := os.ReadFile(path)
+	data, err := os.ReadFile(TokenFile())
+
 	if err != nil {
 		return "", err
 	}
 
 	return strings.TrimSpace(string(data)), nil
+}
+
+func ConfigFile() string {
+
+	return filepath.Join(
+		configDirectory(),
+		"config.toml",
+	)
 }
 
 func LogFile() string {
@@ -203,7 +251,7 @@ func LogFile() string {
 func TokenFile() string {
 
 	return filepath.Join(
-		stateDir(),
+		StateDir(),
 		"github.token",
 	)
 }
@@ -211,7 +259,7 @@ func TokenFile() string {
 func MirrorsStateFile() string {
 
 	return filepath.Join(
-		stateDir(),
+		StateDir(),
 		"mirrors.json",
 	)
 }
@@ -219,7 +267,7 @@ func MirrorsStateFile() string {
 func RepositoryInventoryFile() string {
 
 	return filepath.Join(
-		stateDir(),
+		StateDir(),
 		"repositories.txt",
 	)
 }
@@ -227,16 +275,8 @@ func RepositoryInventoryFile() string {
 func GistInventoryFile() string {
 
 	return filepath.Join(
-		stateDir(),
+		StateDir(),
 		"gists.txt",
-	)
-}
-
-func TempDir() string {
-
-	return filepath.Join(
-		stateDir(),
-		"tmp",
 	)
 }
 
@@ -245,6 +285,14 @@ func LockFile() string {
 	return filepath.Join(
 		os.TempDir(),
 		"gitback.lock",
+	)
+}
+
+func TempDir() string {
+
+	return filepath.Join(
+		StateDir(),
+		"tmp",
 	)
 }
 
@@ -276,7 +324,7 @@ func (cfg *Config) EnsureRuntimeDirectories() error {
 
 		TempDir(),
 
-		stateDir(),
+		StateDir(),
 
 		logDir(),
 	}
