@@ -39,7 +39,7 @@ func (e *Engine) Sync(ctx context.Context) error {
 	// Sync Gists
 	var gists []state.Asset
 
-	if e.cfg.BackupGists {
+	if e.cfg.GitHub.BackupGists {
 
 		gists, err = e.syncGists(ctx)
 
@@ -50,7 +50,7 @@ func (e *Engine) Sync(ctx context.Context) error {
 
 	printSyncSummary("Repositories", repositories)
 
-	if e.cfg.BackupGists {
+	if e.cfg.GitHub.BackupGists {
 		printSyncSummary("Gists", gists)
 	}
 
@@ -58,7 +58,7 @@ func (e *Engine) Sync(ctx context.Context) error {
 
 	// Save assets metadata such URL with their failed/success status
 	if err := state.SaveMirrors(
-		e.cfg.MirrorsStateFile,
+		config.MirrorsStateFile(),
 		syncStartedAt,
 		syncCompletedAt,
 		repositories,
@@ -121,7 +121,7 @@ func (e *Engine) logSyncSummary(
 				"repositories_healthy": repositoryHealthy,
 				"repositories_failed":  repositoryFailed,
 
-				"gists_enabled": e.cfg.BackupGists,
+				"gists_enabled": e.cfg.GitHub.BackupGists,
 				"gists_total":   len(gists),
 				"gists_healthy": gistHealthy,
 				"gists_failed":  gistFailed,

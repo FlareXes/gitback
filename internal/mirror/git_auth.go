@@ -2,6 +2,8 @@ package mirror
 
 import (
 	"os"
+
+	"github.com/flarexes/gitback/internal/config"
 )
 
 func (e *Engine) createAskPassScript() (string, error) {
@@ -19,7 +21,7 @@ esac
 `
 
 	file, err := os.CreateTemp(
-		e.cfg.TempDir,
+		config.TempDir(),
 		"gitback-askpass-*",
 	)
 	if err != nil {
@@ -42,6 +44,8 @@ esac
 
 func (e *Engine) gitEnv(askPass string) []string {
 
+	token, _ := config.ReadToken()
+
 	env := os.Environ()
 
 	env = append(
@@ -51,7 +55,7 @@ func (e *Engine) gitEnv(askPass string) []string {
 
 	env = append(
 		env,
-		"GITBACK_TOKEN="+e.cfg.GitHubToken,
+		"GITBACK_TOKEN="+token,
 	)
 
 	env = append(

@@ -9,9 +9,17 @@ import (
 	"strings"
 	"sync"
 
+	"github.com/flarexes/gitback/internal/config"
 	"github.com/flarexes/gitback/internal/logging"
 	"github.com/flarexes/gitback/internal/state"
 )
+
+func (e *Engine) repoMirrorRoot() string {
+	return filepath.Join(
+		e.cfg.Storage.MirrorRoot,
+		"repositories",
+	)
+}
 
 func (e *Engine) extractRepoName(repoURL string) string {
 
@@ -42,7 +50,7 @@ func (e *Engine) repositoryMirrorPath(repoURL string) string {
 	if len(parts) < 2 {
 
 		return filepath.Join(
-			e.cfg.RepositoryMirrorDir(),
+			e.repoMirrorRoot(),
 			filepath.Base(repoURL),
 		)
 	}
@@ -51,7 +59,7 @@ func (e *Engine) repositoryMirrorPath(repoURL string) string {
 	name := parts[len(parts)-1]
 
 	return filepath.Join(
-		e.cfg.RepositoryMirrorDir(),
+		e.repoMirrorRoot(),
 		owner,
 		name+".git",
 	)
@@ -113,13 +121,13 @@ func (e *Engine) dispatchRepositoryJobs(jobs chan<- string) error {
 
 	defer close(jobs)
 
-	repositories, err := state.ReadInventory(e.cfg.RepositoryInventoryFile())
+	repositories, err := state.ReadInventory(config.RepositoryInventoryFile())
 
 	if err != nil {
 
 		e.logger.Warn(
 			logging.Events.Inventory.Missing,
-			e.cfg.RepositoryInventoryFile(),
+			config.RepositoryInventoryFile(),
 			"repository inventory file not found",
 		)
 
@@ -134,7 +142,7 @@ func (e *Engine) dispatchRepositoryJobs(jobs chan<- string) error {
 
 		e.logger.Warn(
 			logging.Events.Inventory.Empty,
-			e.cfg.RepositoryInventoryFile(),
+			config.RepositoryInventoryFile(),
 			"inventory file is empty",
 		)
 

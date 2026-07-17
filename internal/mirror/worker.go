@@ -52,7 +52,7 @@ func (e *Engine) startWorkers(
 	wg *sync.WaitGroup,
 ) {
 
-	for i := 0; i < e.cfg.SyncWorkers; i++ {
+	for i := 0; i < e.cfg.Sync.Workers; i++ {
 
 		wg.Add(1)
 

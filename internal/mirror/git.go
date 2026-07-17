@@ -20,7 +20,9 @@ func (e *Engine) runGit(
 
 	var lastErr error
 
-	for attempt := 1; attempt <= e.cfg.GitRetryAttempts; attempt++ {
+	retryAttempts := e.cfg.Sync.RetryAttempts
+
+	for attempt := 1; attempt <= retryAttempts; attempt++ {
 
 		cmd := exec.CommandContext(
 			ctx,
@@ -38,7 +40,7 @@ func (e *Engine) runGit(
 
 		lastErr = err
 
-		if attempt == e.cfg.GitRetryAttempts {
+		if attempt == retryAttempts {
 			break
 		}
 
@@ -51,7 +53,7 @@ func (e *Engine) runGit(
 
 				Details: map[string]any{
 					"attempt":      attempt,
-					"max_attempts": e.cfg.GitRetryAttempts,
+					"max_attempts": retryAttempts,
 				},
 			},
 		)

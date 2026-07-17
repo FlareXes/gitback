@@ -9,9 +9,17 @@ import (
 	"strings"
 	"sync"
 
+	"github.com/flarexes/gitback/internal/config"
 	"github.com/flarexes/gitback/internal/logging"
 	"github.com/flarexes/gitback/internal/state"
 )
+
+func (e *Engine) gistMirrorRoot() string {
+	return filepath.Join(
+		e.cfg.Storage.MirrorRoot,
+		"gists",
+	)
+}
 
 func (e *Engine) extractGistName(gistURL string) string {
 
@@ -29,7 +37,7 @@ func (e *Engine) gistMirrorPath(gistURL string) string {
 	)
 
 	return filepath.Join(
-		e.cfg.GistMirrorDir(),
+		e.gistMirrorRoot(),
 		id+".git",
 	)
 }
@@ -92,13 +100,13 @@ func (e *Engine) dispatchGistJobs(jobs chan<- string) error {
 
 	defer close(jobs)
 
-	gists, err := state.ReadInventory(e.cfg.GistInventoryFile())
+	gists, err := state.ReadInventory(config.GistInventoryFile())
 
 	if err != nil {
 
 		e.logger.Warn(
 			logging.Events.Inventory.Missing,
-			e.cfg.GistInventoryFile(),
+			config.GistInventoryFile(),
 			"gist inventory file not found",
 		)
 
@@ -113,7 +121,7 @@ func (e *Engine) dispatchGistJobs(jobs chan<- string) error {
 
 		e.logger.Warn(
 			logging.Events.Inventory.Empty,
-			e.cfg.GistInventoryFile(),
+			config.GistInventoryFile(),
 			"gist inventory file is empty",
 		)
 
