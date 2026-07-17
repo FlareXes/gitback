@@ -229,7 +229,13 @@ func ReadToken() (string, error) {
 		return "", err
 	}
 
-	return strings.TrimSpace(string(data)), nil
+	token := strings.TrimSpace(string(data))
+
+	if token == "" {
+		return "", fmt.Errorf("github token not configured; run: gitback init")
+	}
+
+	return token, nil
 }
 
 func ConfigFile() string {

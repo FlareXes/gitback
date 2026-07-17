@@ -18,13 +18,15 @@ type Client struct {
 
 func New(cfg *config.Config, logger *logging.Logger) (*Client, error) {
 
-	if cfg.GitHubToken == "" {
-		return nil, fmt.Errorf("github token not configured; run: gitback init")
+	token, err := config.ReadToken()
+
+	if err != nil {
+		return nil, fmt.Errorf("read github token: %w", err)
 	}
 
 	api, err := github.NewClient(
 		github.WithAuthToken(
-			cfg.GitHubToken,
+			token,
 		),
 	)
 
