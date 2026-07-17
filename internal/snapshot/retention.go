@@ -18,7 +18,10 @@ import (
 // Retention is disabled when configured <= 0.
 func ApplyRetention(cfg *config.Config, logger *logging.Logger) error {
 
-	if cfg.SnapshotRetention <= 0 {
+	snapshotDir := cfg.Snapshot.OutputDirectory
+	snapshotRetentionCount := cfg.Snapshot.Retention
+
+	if snapshotRetentionCount <= 0 {
 
 		logger.Info(
 			logging.Events.Snapshot.RetentionDisabled,
@@ -33,7 +36,7 @@ func ApplyRetention(cfg *config.Config, logger *logging.Logger) error {
 		"",
 	)
 
-	entries, err := os.ReadDir(cfg.SnapshotDir)
+	entries, err := os.ReadDir(snapshotDir)
 
 	if err != nil {
 		return err
@@ -65,11 +68,11 @@ func ApplyRetention(cfg *config.Config, logger *logging.Logger) error {
 	//
 	sort.Strings(snapshots)
 
-	if len(snapshots) <= cfg.SnapshotRetention {
+	if len(snapshots) <= snapshotRetentionCount {
 		return nil
 	}
 
-	toDelete := snapshots[:len(snapshots)-cfg.SnapshotRetention]
+	toDelete := snapshots[:len(snapshots)-snapshotRetentionCount]
 
 	var deletedSnapshots []string
 	var deletedChecksums []string
@@ -80,7 +83,7 @@ func ApplyRetention(cfg *config.Config, logger *logging.Logger) error {
 
 		// delete snapshot file
 		snapshotPath := filepath.Join(
-			cfg.SnapshotDir,
+			snapshotDir,
 			snapshot,
 		)
 
@@ -109,7 +112,7 @@ func ApplyRetention(cfg *config.Config, logger *logging.Logger) error {
 		checksum := snapshot + ".sha256"
 
 		checksumPath := filepath.Join(
-			cfg.SnapshotDir,
+			snapshotDir,
 			checksum,
 		)
 
@@ -152,7 +155,7 @@ func ApplyRetention(cfg *config.Config, logger *logging.Logger) error {
 			Event: logging.Events.Snapshot.RetentionCompleted,
 
 			Details: map[string]any{
-				"retention": cfg.SnapshotRetention,
+				"retention": snapshotRetentionCount,
 
 				"deleted_snapshots": deletedSnapshots,
 

@@ -65,7 +65,7 @@ func (e *Engine) Create(ctx context.Context, force bool) error {
 		UTC().
 		Format("2006-01-02T15-04-05Z")
 
-	tarFile := filepath.Join(e.cfg.SnapshotDir, timestamp+".tar")
+	tarFile := filepath.Join(e.cfg.Snapshot.OutputDirectory, timestamp+".tar")
 	archiveFile := tarFile + ".zst"
 	checksumFile := archiveFile + ".sha256"
 
@@ -225,7 +225,7 @@ func (e *Engine) verifyMirrors() error {
 		"",
 	)
 
-	data, err := state.LoadMirrors(e.cfg.MirrorsStateFile)
+	data, err := state.LoadMirrors(config.MirrorsStateFile())
 
 	if err != nil {
 
@@ -294,33 +294,35 @@ func (e *Engine) verifyMirrors() error {
 
 // Create a tar archive containing:
 //
-//	mirrors/
+//	<mirror_root>/
+//
 //	state/mirrors.json
 func (e *Engine) createTar(ctx context.Context, output string) error {
 
-	// Equivalent shell command:
-	// tar -cf <output> -C <dataDir> mirrors state/mirrors.json
+	mirrorRoot := e.cfg.Storage.MirrorRoot
+
+	stateDir := config.StateDir()
+
 	cmd := exec.CommandContext(
 		ctx,
 		"tar",
 		"-cf",
 		output,
 
+		// Add mirror directory.
 		"-C",
-		filepath.Dir(e.cfg.MirrorDir),
+		filepath.Dir(mirrorRoot),
+		filepath.Base(mirrorRoot),
 
-		filepath.Base(e.cfg.MirrorDir),
-
-		filepath.Join(
-			filepath.Base(e.cfg.StateDir),
-			filepath.Base(e.cfg.MirrorsStateFile),
-		),
+		// Add mirror state file.
+		"-C",
+		stateDir,
+		filepath.Base(config.MirrorsStateFile()),
 	)
 
 	out, err := cmd.CombinedOutput()
-
 	if err != nil {
-		return fmt.Errorf("tar failed: %s", string(out))
+		return fmt.Errorf("tar failed: %s", strings.TrimSpace(string(out)))
 	}
 
 	return nil
