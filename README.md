@@ -9,9 +9,10 @@ Unlike traditional backup scripts, GitBack is designed to run continuously as a 
 ## Features
 
 - Backup GitHub repositories
-- Backup GitHub gists (optional)
+- Backup GitHub gists
 - Incremental concurrent synchronization
 - Snapshot creation
+- Automatic snapshot retention
 - Repository integrity verification
 - Health reporting
 - Environment diagnostics
@@ -21,6 +22,8 @@ Unlike traditional backup scripts, GitBack is designed to run continuously as a 
 ## Installation
 
 ### Pre-requisites
+
+- Go 1.24+ (building from source)
 
 - git
 
@@ -178,7 +181,8 @@ Snapshot retention can be configured to automatically remove older snapshots.
 Example:
 
 ```yaml
-snapshot_retention: 30
+[snapshot]
+retention = 30
 ```
 
 Retains the newest 30 snapshots. Retention is disabled by default (`0 or < 1`).
@@ -207,7 +211,7 @@ Can be scheduled using:
 
 - [ ] Windows and macOS support
     
-- [ ] Multi-worker synchronization
+- [x] Multi-worker synchronization
     
 - [x] Git retry and backoff support
     
