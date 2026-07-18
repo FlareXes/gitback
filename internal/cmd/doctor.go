@@ -24,9 +24,7 @@ var doctorCmd = &cobra.Command{
 			return err
 		}
 
-		cfg := config.Default()
-
-		if err := logDoctorReport(cfg.LogFile, report); err != nil {
+		if err := logDoctorReport(config.LogFile(), report); err != nil {
 
 			fmt.Fprintf(
 				os.Stderr,

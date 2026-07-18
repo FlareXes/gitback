@@ -24,7 +24,7 @@ var healthCmd = &cobra.Command{
 			return err
 		}
 
-		if err := cfg.EnsureDirectories(); err != nil {
+		if err := cfg.EnsureRuntimeDirectories(); err != nil {
 			return err
 		}
 
@@ -36,7 +36,7 @@ var healthCmd = &cobra.Command{
 			return err
 		}
 
-		if err := logHealthReport(cfg.LogFile, report); err != nil {
+		if err := logHealthReport(config.LogFile(), report); err != nil {
 			fmt.Fprintf(
 				os.Stderr,
 				"[WARN] Failed to write health report to log: %v\n",

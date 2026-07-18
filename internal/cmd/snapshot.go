@@ -25,12 +25,12 @@ var snapshotCmd = &cobra.Command{
 			return err
 		}
 
-		if err := cfg.EnsureDirectories(); err != nil {
+		if err := cfg.EnsureRuntimeDirectories(); err != nil {
 			return err
 		}
 
 		// Logging
-		logger, err := logging.New(cfg.LogFile)
+		logger, err := logging.New(config.LogFile())
 		if err != nil {
 			return err
 		}
@@ -43,7 +43,7 @@ var snapshotCmd = &cobra.Command{
 		)
 
 		// Lock
-		locker := lock.New(cfg.LockFile)
+		locker := lock.New(config.LockFile())
 
 		unlock, err := locker.Acquire()
 		if err != nil {

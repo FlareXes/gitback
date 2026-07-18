@@ -23,17 +23,17 @@ var syncCmd = &cobra.Command{
 			return err
 		}
 
-		if err := cfg.EnsureDirectories(); err != nil {
+		if err := cfg.EnsureRuntimeDirectories(); err != nil {
 			return err
 		}
 
-		logger, err := logging.New(cfg.LogFile)
+		logger, err := logging.New(config.LogFile())
 		if err != nil {
 			return err
 		}
 		defer logger.Close()
 
-		locker := lock.New(cfg.LockFile)
+		locker := lock.New(config.LockFile())
 
 		// Prevent multiple sync processes running simultaneously
 		unlock, err := locker.Acquire()

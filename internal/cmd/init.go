@@ -23,16 +23,17 @@ var initCmd = &cobra.Command{
 		cfg := config.Default()
 
 		dirs := []string{
-			cfg.ConfigDir,
-			cfg.DataDir,
+			filepath.Dir(config.ConfigFile()),
 
-			cfg.MirrorDir,
-			cfg.SnapshotDir,
-			cfg.StateDir,
+			cfg.Storage.MirrorRoot,
 
-			cfg.LogDir,
+			cfg.Snapshot.OutputDirectory,
 
-			cfg.TempDir,
+			config.StateDir(),
+
+			filepath.Dir(config.LogFile()),
+
+			config.TempDir(),
 		}
 
 		// Create all required directories
@@ -101,14 +102,14 @@ var initCmd = &cobra.Command{
 			)
 		}
 
-		configPath := filepath.Join(cfg.ConfigDir, "config.yaml")
+		configPath := config.ConfigFile()
 
 		if err := config.Write(configPath, cfg); err != nil {
 			return err
 		}
 
 		// Save token separately
-		if err := os.WriteFile(cfg.TokenFile, []byte(token+"\n"), 0600); err != nil {
+		if err := os.WriteFile(config.TokenFile(), []byte(token+"\n"), 0600); err != nil {
 			return err
 		}
 
@@ -121,7 +122,7 @@ var initCmd = &cobra.Command{
 		}
 
 		fmt.Printf("Authenticated as: %s\n", user.GetLogin())
-		fmt.Printf("Token file: %s\n", cfg.TokenFile)
+		fmt.Printf("Token file: %s\n", config.TokenFile())
 		fmt.Printf("Config file: %s\n", configPath)
 
 		fmt.Println("\ngitback initialized successfully")
