@@ -3,6 +3,7 @@ package health
 import (
 	"fmt"
 	"os"
+	"path/filepath"
 	"sort"
 	"strings"
 	"syscall"
@@ -160,7 +161,7 @@ func populateSnapshots(cfg *config.Config, report *HealthReport) error {
 		return nil
 	}
 
-	report.Snapshots.Size = humanSize(totalSize)
+	report.Snapshots.Size = totalSize
 
 	sort.Strings(snapshots)
 
@@ -169,61 +170,41 @@ func populateSnapshots(cfg *config.Config, report *HealthReport) error {
 	return nil
 }
 
-// TODO: Re-implmement disk check
-// 1. Check snapshots and mirrors
-// 2. Handle multi-disk / partition scenarios
-// 3. Calculate total usage across all disks
-// 4. Snapshots are optional
-// Note: maybe just calc disk storage and avoid backup size calc
 func populateDisk(cfg *config.Config, report *HealthReport) error {
 
-	var stat syscall.Statfs_t
-
-	if err := syscall.Statfs(
+	// More locations can be added here in the future without changing
+	// the rest of the implementation.
+	paths := []string{
 		cfg.Storage.MirrorRoot,
-		&stat,
-	); err != nil {
-
-		return err
 	}
 
-	free := stat.Bavail * uint64(stat.Bsize)
-	total := stat.Blocks * uint64(stat.Bsize)
-
-	if total == 0 {
-		return nil
+	// Snapshots are optional.
+	if cfg.Snapshot.OutputDirectory != "" {
+		paths = append(paths, cfg.Snapshot.OutputDirectory)
 	}
 
-	report.Disk.FreePercent =
-		int(
-			(free * 100) / total,
-		)
+	// Multiple configured paths may live on the same filesystem.
+	// Track device IDs so we only report each filesystem once.
+	seen := make(map[uint64]struct{})
 
-	report.Disk.Free =
-		humanSize(
-			int64(free),
-		)
+	for _, path := range paths {
 
-	report.Disk.MinimumPercent =
-		cfg.Health.MinimumFreeDiskPercent
+		disk, err := diskUsage(path)
+
+		if err != nil {
+			return err
+		}
+
+		if _, ok := seen[disk.Device]; ok {
+			continue
+		}
+
+		seen[disk.Device] = struct{}{}
+
+		report.Disks = append(report.Disks, *disk)
+	}
 
 	return nil
-}
-
-func updateStatus(cfg *config.Config, report *HealthReport) {
-
-	report.Status = "healthy"
-
-	if report.Repositories.Failed > 0 || report.Gists.Failed > 0 {
-
-		report.Status = "warning"
-	}
-
-	if report.Disk.FreePercent <
-		cfg.Health.MinimumFreeDiskPercent {
-
-		report.Status = "critical"
-	}
 }
 
 func populateWarnings(cfg *config.Config, report *HealthReport) {
@@ -241,13 +222,16 @@ func populateWarnings(cfg *config.Config, report *HealthReport) {
 		)
 	}
 
-	if report.Disk.FreePercent <
-		cfg.Health.MinimumFreeDiskPercent {
-
-		report.Warnings = append(
-			report.Warnings,
-			"disk space below configured threshold",
-		)
+	for _, disk := range report.Disks {
+		if disk.FreePercent < cfg.Health.MinimumFreeDiskPercent {
+			report.Warnings = append(
+				report.Warnings,
+				fmt.Sprintf(
+					"disk space below configured threshold on %s",
+					disk.Path,
+				),
+			)
+		}
 	}
 
 	if cfg.Snapshot.Retention == 1 {
@@ -272,12 +256,16 @@ func populateRecommendations(cfg *config.Config, report *HealthReport) {
 		)
 	}
 
-	if report.Disk.FreePercent < cfg.Health.MinimumFreeDiskPercent {
-
-		report.Recommendations = append(
-			report.Recommendations,
-			"consider increasing available storage",
-		)
+	for _, disk := range report.Disks {
+		if disk.FreePercent < cfg.Health.MinimumFreeDiskPercent {
+			report.Recommendations = append(
+				report.Recommendations,
+				fmt.Sprintf(
+					"consider increasing available storage on %s",
+					disk.Path,
+				),
+			)
+		}
 	}
 
 	if report.Snapshots.Count == 0 {
@@ -289,32 +277,49 @@ func populateRecommendations(cfg *config.Config, report *HealthReport) {
 	}
 }
 
-func humanSize(b int64) string {
+func updateStatus(cfg *config.Config, report *HealthReport) {
 
-	// Unit names in order.
-	units := []string{"B", "KB", "MB", "GB", "TB", "PB", "EB"}
+	report.Status = "healthy"
 
-	// Work with float64 so we can divide repeatedly.
-	size := float64(b)
+	if report.Repositories.Failed > 0 || report.Gists.Failed > 0 {
 
-	// Current unit index.
-	// 0 = B
-	// 1 = KB
-	// 2 = MB
-	// ...
-	unit := 0
-
-	// Keep dividing by 1024 until the number
-	// becomes smaller than 1024.
-	for size >= 1024 && unit < len(units)-1 {
-		size /= 1024
-		unit++
+		report.Status = "warning"
 	}
 
-	// For bytes, don't show decimal places.
-	if unit == 0 {
-		return fmt.Sprintf("%d %s", b, units[unit])
+	for _, disk := range report.Disks {
+		if disk.FreePercent < cfg.Health.MinimumFreeDiskPercent {
+			report.Status = "critical"
+			break
+		}
+	}
+}
+
+func diskUsage(path string) (*DiskHealth, error) {
+
+	path = filepath.Clean(path)
+
+	var stat syscall.Statfs_t
+
+	if err := syscall.Statfs(path, &stat); err != nil {
+		return nil, err
 	}
 
-	return fmt.Sprintf("%.1f %s", size, units[unit])
+	total := stat.Blocks * uint64(stat.Bsize)
+
+	if total == 0 {
+		return nil, fmt.Errorf(
+			"filesystem %q reports zero capacity",
+			path,
+		)
+	}
+
+	free := stat.Bavail * uint64(stat.Bsize)
+
+	return &DiskHealth{
+		Path:        path,
+		Free:        free,
+		Total:       total,
+		FreePercent: uint8((free * 100) / total),
+		Device:      uint64(stat.Fsid.X__val[0]),
+	}, nil
 }

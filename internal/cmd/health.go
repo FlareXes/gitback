@@ -13,6 +13,20 @@ import (
 	"github.com/spf13/cobra"
 )
 
+var healthJSON bool
+
+func init() {
+
+	rootCmd.AddCommand(healthCmd)
+
+	healthCmd.Flags().BoolVar(
+		&healthJSON,
+		"json",
+		false,
+		"Output machine-readable JSON",
+	)
+}
+
 var healthCmd = &cobra.Command{
 	Use:   "health",
 	Short: "Show GitBack health report",
@@ -44,18 +58,25 @@ var healthCmd = &cobra.Command{
 			)
 		}
 
-		encoder := json.NewEncoder(
-			os.Stdout,
-		)
+		if healthJSON {
 
-		encoder.SetIndent(
-			"",
-			"  ",
-		)
+			encoder := json.NewEncoder(
+				os.Stdout,
+			)
 
-		return encoder.Encode(
-			report,
-		)
+			encoder.SetIndent(
+				"",
+				"  ",
+			)
+
+			return encoder.Encode(
+				report,
+			)
+		}
+
+		health.PrintReport(report)
+
+		return nil
 	},
 }
 

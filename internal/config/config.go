@@ -41,7 +41,7 @@ type SyncConfig struct {
 }
 
 type HealthConfig struct {
-	MinimumFreeDiskPercent int `mapstructure:"minimum_free_disk_percent"`
+	MinimumFreeDiskPercent uint8 `mapstructure:"minimum_free_disk_percent"`
 }
 
 // Default returns the default configuration.

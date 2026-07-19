@@ -40,8 +40,7 @@ func (c *Config) Validate() error {
 		)
 	}
 
-	if c.Health.MinimumFreeDiskPercent < 0 ||
-		c.Health.MinimumFreeDiskPercent > 100 {
+	if c.Health.MinimumFreeDiskPercent > 100 {
 
 		issues = append(
 			issues,
