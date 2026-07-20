@@ -6,7 +6,6 @@ import (
 	"context"
 	"fmt"
 	"os"
-	"os/exec"
 	"path/filepath"
 	"strings"
 	"time"
@@ -152,41 +151,6 @@ func (e *Engine) updateMirror(ctx context.Context, target string) error {
 		return err
 	}
 
-	e.logger.Info(
-		logging.Events.Mirror.FsckStarted,
-		repoName,
-	)
-
-	fsck := exec.CommandContext(
-		ctx,
-		"git",
-		"-C",
-		target,
-		"fsck",
-		"--no-dangling",
-	)
-
-	if output, err := fsck.CombinedOutput(); err != nil {
-
-		fsckErr := fmt.Errorf(
-			"git fsck: %s",
-			strings.TrimSpace(string(output)),
-		)
-
-		e.logger.Error(
-			logging.Events.Mirror.FsckFailed,
-			repoName,
-			fsckErr,
-		)
-
-		return fsckErr
-	}
-
-	e.logger.Info(
-		logging.Events.Mirror.FsckCompleted,
-		repoName,
-	)
-
 	e.logger.Duration(
 		logging.Events.Mirror.UpdateCompleted,
 		repoName,
@@ -201,6 +165,11 @@ func (e *Engine) syncMirror(ctx context.Context, url string, target string) erro
 	// clone if asset doesn't exist
 	if _, err := os.Stat(target); os.IsNotExist(err) {
 		return e.cloneMirror(ctx, url, target)
+	}
+
+	// Validate the existing mirror before attempting to update it.
+	if err := e.validateMirror(ctx, target); err != nil {
+		return err
 	}
 
 	// update existing asset
