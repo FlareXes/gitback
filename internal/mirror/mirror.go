@@ -4,6 +4,7 @@ package mirror
 
 import (
 	"context"
+	"errors"
 	"fmt"
 	"os"
 	"path/filepath"
@@ -169,6 +170,13 @@ func (e *Engine) syncMirror(ctx context.Context, url string, target string) erro
 
 	// Validate the existing mirror before attempting to update it.
 	if err := e.validateMirror(ctx, target); err != nil {
+
+		// Corrupt mirrors cannot be updated; return error for retry logic.
+		if errors.Is(err, ErrMirrorCorrupt) {
+			// TODO: Recovery is implemented in the next PR.
+			return err
+		}
+
 		return err
 	}
 

@@ -2,6 +2,7 @@ package mirror
 
 import (
 	"context"
+	"errors"
 	"fmt"
 	"os/exec"
 	"path/filepath"
@@ -9,6 +10,8 @@ import (
 
 	"github.com/flarexes/gitback/internal/logging"
 )
+
+var ErrMirrorCorrupt = errors.New("mirror is corrupt")
 
 func (e *Engine) validateMirror(ctx context.Context, target string) error {
 
@@ -35,7 +38,8 @@ func (e *Engine) validateMirror(ctx context.Context, target string) error {
 	if err != nil {
 
 		fsckErr := fmt.Errorf(
-			"git fsck: %s",
+			"%w: %s",
+			ErrMirrorCorrupt,
 			strings.TrimSpace(string(output)),
 		)
 
