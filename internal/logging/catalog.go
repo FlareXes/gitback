@@ -29,6 +29,10 @@ type MirrorEvents struct {
 	UpdateCompleted string
 	UpdateFailed    string
 
+	QuarantineStarted   string
+	QuarantineCompleted string
+	QuarantineFailed    string
+
 	Retry string
 
 	FsckStarted   string

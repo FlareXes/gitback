@@ -174,7 +174,10 @@ func (e *Engine) syncMirror(ctx context.Context, url string, target string) erro
 		// Corrupt mirrors cannot be updated; return error for retry logic.
 		if errors.Is(err, ErrMirrorCorrupt) {
 			// TODO: Recovery is implemented in the next PR.
-			return err
+			if _, qerr := e.quarantineMirror(target); qerr != nil {
+				return qerr
+			}
+
 		}
 
 		return err

@@ -302,6 +302,13 @@ func TempDir() string {
 	)
 }
 
+func QuarantineDir(cfg *Config) string {
+	return filepath.Join(
+		filepath.Dir(cfg.Storage.MirrorRoot),
+		"quarantine",
+	)
+}
+
 // --------------------------------------
 // Helper functions.
 // --------------------------------------
