@@ -8,6 +8,7 @@ const (
 	Info  Level = "INFO"
 	Warn  Level = "WARN"
 	Error Level = "ERROR"
+	Critical Level = "CRITICAL"
 )
 
 type Entry struct {

@@ -173,6 +173,21 @@ func (e *Engine) syncMirror(ctx context.Context, url string, target string) erro
 
 		// Corrupt mirrors cannot be updated; return error for retry logic.
 		if errors.Is(err, ErrMirrorCorrupt) {
+
+			// Log the corruption event
+			repoName := filepath.Base(target)
+
+			e.logger.Emit(
+				logging.Entry{
+					Level: logging.Critical,
+					Event: "CorruptMirror",
+					Repo:  repoName,
+					Details: map[string]any{
+						"action": "quarantined",
+					},
+				},
+			)
+
 			// TODO: Recovery is implemented in the next PR.
 			if _, qerr := e.quarantineMirror(target); qerr != nil {
 				return qerr
