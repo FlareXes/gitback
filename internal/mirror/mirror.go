@@ -163,7 +163,7 @@ func (e *Engine) updateMirror(ctx context.Context, target string) error {
 
 func (e *Engine) syncMirror(ctx context.Context, url string, target string) error {
 
-	// clone if asset doesn't exist
+	// Clone if asset doesn't exist.
 	if _, err := os.Stat(target); os.IsNotExist(err) {
 		return e.cloneMirror(ctx, url, target)
 	}
@@ -174,30 +174,108 @@ func (e *Engine) syncMirror(ctx context.Context, url string, target string) erro
 		// Corrupt mirrors cannot be updated; return error for retry logic.
 		if errors.Is(err, ErrMirrorCorrupt) {
 
-			// Log the corruption event
+			// Log the corruption event.
 			repoName := filepath.Base(target)
 
 			e.logger.Emit(
 				logging.Entry{
 					Level: logging.Critical,
-					Event: "CorruptMirror",
+					Event: logging.Events.Mirror.CorruptionDetected,
 					Repo:  repoName,
 					Details: map[string]any{
-						"action": "quarantined",
+						"action": "quarantine",
 					},
 				},
 			)
 
-			// TODO: Recovery is implemented in the next PR.
-			if _, qerr := e.quarantineMirror(target); qerr != nil {
+			// Quarantine the corrupt mirror.
+			quarantinePath, qerr := e.quarantineMirror(target)
+			if qerr != nil {
 				return qerr
 			}
+
+			// Try to recover the corrupt mirror.
+			if rerr := e.recoverCorruptMirror(ctx, url, target, quarantinePath); rerr != nil {
+
+				e.logger.Emit(
+					logging.Entry{
+						Level: logging.Critical,
+						Event: logging.Events.Mirror.RecoveryFailed,
+						Repo:  repoName,
+						Details: map[string]any{
+							"error": err.Error(),
+						},
+					},
+				)
+
+				return rerr
+			}
+
+			e.logger.Emit(
+				logging.Entry{
+					Level: logging.Info,
+					Event: logging.Events.Mirror.RecoverySucceeded,
+					Repo:  repoName,
+				},
+			)
+
+			return nil
 
 		}
 
 		return err
 	}
 
-	// update existing asset
+	// Update existing asset.
 	return e.updateMirror(ctx, target)
+}
+
+// recoverCorruptMirror clones a fresh mirror, validates it, and atomically replaces
+// the active mirror. The quarantined mirror is removed only after the
+// replacement has been verified.
+func (e *Engine) recoverCorruptMirror(
+	ctx context.Context,
+	url string,
+	target string,
+	quarantine string,
+) error {
+
+	tmp := target + ".tmp"
+
+	// Remove any stale temporary mirror from a previous failed run.
+	if err := os.RemoveAll(tmp); err != nil {
+		return fmt.Errorf("remove temporary mirror: %w", err)
+	}
+
+	// Ensure temporary files are cleaned up if replacement fails.
+	defer os.RemoveAll(tmp)
+
+	// Clone a fresh mirror to the temporary path.
+	if err := e.cloneMirror(ctx, url, tmp); err != nil {
+		return err
+	}
+
+	// Validate the fresh mirror before replacing the active one.
+	if err := e.validateMirror(ctx, tmp); err != nil {
+		return err
+	}
+
+	// Atomically replace the active mirror with the fresh one.
+	if err := os.Rename(tmp, target); err != nil {
+		return fmt.Errorf(
+			"activate replacement mirror: %w",
+			err,
+		)
+	}
+
+	// Remove the quarantined mirror after successful replacement.
+	if err := os.RemoveAll(quarantine); err != nil {
+		e.logger.Warn(
+			logging.Events.Mirror.QuarantineCleanupFailed,
+			filepath.Base(target),
+			err.Error(),
+		)
+	}
+
+	return nil
 }

@@ -29,15 +29,20 @@ type MirrorEvents struct {
 	UpdateCompleted string
 	UpdateFailed    string
 
-	QuarantineStarted   string
-	QuarantineCompleted string
-	QuarantineFailed    string
-
 	Retry string
 
 	FsckStarted   string
 	FsckCompleted string
 	FsckFailed    string
+
+	QuarantineStarted       string
+	QuarantineCompleted     string
+	QuarantineFailed        string
+	QuarantineCleanupFailed string
+
+	CorruptionDetected string
+	RecoverySucceeded  string
+	RecoveryFailed     string
 
 	StateSaveFailed string
 }
@@ -153,6 +158,15 @@ var Events = EventCatalog{
 		FsckStarted:   "mirror_fsck_started",
 		FsckCompleted: "mirror_fsck_completed",
 		FsckFailed:    "mirror_fsck_failed",
+
+		QuarantineStarted:       "mirror_quarantine_started",
+		QuarantineCompleted:     "mirror_quarantine_completed",
+		QuarantineFailed:        "mirror_quarantine_failed",
+		QuarantineCleanupFailed: "mirror_quarantine_cleanup_failed",
+
+		CorruptionDetected: "mirror_corruption_detected",
+		RecoverySucceeded:  "mirror_recovery_succeeded",
+		RecoveryFailed:     "mirror_recovery_failed",
 
 		StateSaveFailed: "mirror_state_save_failed",
 	},

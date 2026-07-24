@@ -66,9 +66,15 @@ func (e *Engine) quarantineMirror(target string) (string, error) {
 		return "", err
 	}
 
-	e.logger.Info(
-		logging.Events.Mirror.QuarantineCompleted,
-		repoName,
+	e.logger.Emit(
+		logging.Entry{
+			Level: logging.Info,
+			Event: logging.Events.Mirror.QuarantineCompleted,
+			Repo:  repoName,
+			Details: map[string]any{
+				"quarantine_path": quarantinePath,
+			},
+		},
 	)
 
 	return quarantinePath, nil
