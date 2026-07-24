@@ -10,6 +10,7 @@ Unlike traditional backup scripts, GitBack is designed to run continuously as a 
 
 - Backup GitHub repositories
 - Backup GitHub gists
+- Self-heal corrupt mirrors
 - Incremental concurrent synchronization
 - Snapshot creation
 - Automatic snapshot retention
@@ -221,7 +222,7 @@ Can be scheduled using:
 
 - [ ] Wiki backups
 
-- [ ] Improved mirror self-healing
+- [x] Improved mirror self-healing
 
 - [ ] Additional health diagnostics
 
