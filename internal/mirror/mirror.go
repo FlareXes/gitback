@@ -165,7 +165,30 @@ func (e *Engine) syncMirror(ctx context.Context, url string, target string) erro
 
 	// Clone if asset doesn't exist.
 	if _, err := os.Stat(target); os.IsNotExist(err) {
-		return e.cloneMirror(ctx, url, target)
+
+		if err := e.cloneMirror(ctx, url, target); err != nil {
+			return err
+		}
+
+		// Remove any stale quarantined copy so the
+		// quarantine directory only contains unresolved mirrors.
+		repoName := filepath.Base(target)
+
+		if err := e.cleanupQuarantine(target); err != nil {
+
+			e.logger.Emit(
+				logging.Entry{
+					Level: logging.Warn,
+					Event: logging.Events.Mirror.QuarantineCleanupFailed,
+					Repo:  repoName,
+					Details: map[string]any{
+						"error": err.Error(),
+					},
+				},
+			)
+		}
+
+		return nil
 	}
 
 	// Validate the existing mirror before attempting to update it.
@@ -203,7 +226,7 @@ func (e *Engine) syncMirror(ctx context.Context, url string, target string) erro
 						Event: logging.Events.Mirror.RecoveryFailed,
 						Repo:  repoName,
 						Details: map[string]any{
-							"error": err.Error(),
+							"error": rerr.Error(),
 						},
 					},
 				)

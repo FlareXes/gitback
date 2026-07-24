@@ -79,3 +79,42 @@ func (e *Engine) quarantineMirror(target string) (string, error) {
 
 	return quarantinePath, nil
 }
+
+func (e *Engine) cleanupQuarantine(target string) error {
+
+	relative, err := filepath.Rel(
+		e.cfg.Storage.MirrorRoot,
+		target,
+	)
+
+	if err != nil {
+		return fmt.Errorf("compute quarantine path: %w", err)
+	}
+
+	quarantine := filepath.Join(
+		config.QuarantineDir(e.cfg),
+		relative,
+	)
+
+	if _, err := os.Stat(quarantine); err != nil {
+
+		if os.IsNotExist(err) {
+			return nil
+		}
+
+		return err
+	}
+
+	repoName := filepath.Base(target)
+
+	if err := os.RemoveAll(quarantine); err != nil {
+		return err
+	}
+
+	e.logger.Info(
+		logging.Events.Mirror.QuarantineCleanupCompleted,
+		repoName,
+	)
+
+	return nil
+}

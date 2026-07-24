@@ -35,10 +35,11 @@ type MirrorEvents struct {
 	FsckCompleted string
 	FsckFailed    string
 
-	QuarantineStarted       string
-	QuarantineCompleted     string
-	QuarantineFailed        string
-	QuarantineCleanupFailed string
+	QuarantineStarted          string
+	QuarantineCompleted        string
+	QuarantineFailed           string
+	QuarantineCleanupCompleted string
+	QuarantineCleanupFailed    string
 
 	CorruptionDetected string
 	RecoverySucceeded  string
