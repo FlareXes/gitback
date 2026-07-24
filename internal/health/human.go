@@ -18,6 +18,12 @@ func PrintReport(report *HealthReport) {
 		fmt.Printf("  Total:   %d\n\n", report.Gists.Total)
 	}
 
+	if report.Quarantine.Repositories > 0 || report.Quarantine.Gists > 0 {
+		fmt.Println("Quarantine")
+		fmt.Printf("  Repositories: %d\n", report.Quarantine.Repositories)
+		fmt.Printf("  Gists:        %d\n\n", report.Quarantine.Gists)
+	}
+
 	fmt.Println("Snapshots")
 	fmt.Printf("  Count:  %d\n", report.Snapshots.Count)
 

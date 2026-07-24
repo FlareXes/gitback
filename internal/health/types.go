@@ -10,6 +10,8 @@ type HealthReport struct {
 	Repositories AssetHealth `json:"repositories"`
 	Gists        AssetHealth `json:"gists"`
 
+	Quarantine QuarantineHealth `json:"quarantine"`
+
 	Sync      SyncHealth      `json:"sync"`
 	Snapshots SnapshotHealth  `json:"snapshots"`
 	Disks     []DiskHealth    `json:"disks"`
@@ -25,17 +27,16 @@ type AssetHealth struct {
 	Failed  int `json:"failed"`
 }
 
-type SnapshotHealth struct {
-	Count  uint64 `json:"count"`
-	Size   int64 `json:"size"`
-	Latest string `json:"latest,omitempty"`
+type QuarantineHealth struct {
+	Repositories int `json:"repositories"`
+	Gists        int `json:"gists"`
 }
 
-// type DiskHealth struct {
-// 	FreePercent    int    `json:"free_percent"`
-// 	MinimumPercent int    `json:"minimum_percent"`
-// 	Free           string `json:"free"`
-// }
+type SnapshotHealth struct {
+	Count  uint64 `json:"count"`
+	Size   int64  `json:"size"`
+	Latest string `json:"latest,omitempty"`
+}
 
 type DiskHealth struct {
 	Path        string `json:"path"`

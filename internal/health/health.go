@@ -32,6 +32,10 @@ func Generate(cfg *config.Config) (*HealthReport, error) {
 		return nil, err
 	}
 
+	if err := populateQuarantine(cfg, report); err != nil {
+		return nil, err
+	}
+
 	if err := populateSnapshots(cfg, report); err != nil {
 		return nil, err
 	}
@@ -109,6 +113,25 @@ func populateAssets(cfg *config.Config, report *HealthReport) error {
 			}
 		}
 	}
+
+	return nil
+}
+
+// populateQuarantine counts mirrors that remain quarantined after automatic recovery attempts.
+func populateQuarantine(cfg *config.Config, report *HealthReport) error {
+
+	repositories, err := countQuarantinedRepositories(cfg)
+	if err != nil {
+		return err
+	}
+
+	gists, err := countQuarantinedGists(cfg)
+	if err != nil {
+		return err
+	}
+
+	report.Quarantine.Repositories = repositories
+	report.Quarantine.Gists = gists
 
 	return nil
 }
@@ -222,6 +245,20 @@ func populateWarnings(cfg *config.Config, report *HealthReport) {
 		)
 	}
 
+	// Quarantine
+	quarantined := report.Quarantine.Repositories + report.Quarantine.Gists
+	if quarantined > 0 {
+
+		report.Warnings = append(
+			report.Warnings,
+			fmt.Sprintf(
+				"%d mirrors quarantined",
+				quarantined,
+			),
+		)
+	}
+
+	// Disk space
 	for _, disk := range report.Disks {
 		if disk.FreePercent < cfg.Health.MinimumFreeDiskPercent {
 			report.Warnings = append(
@@ -234,6 +271,7 @@ func populateWarnings(cfg *config.Config, report *HealthReport) {
 		}
 	}
 
+	// Snapshot retention
 	if cfg.Snapshot.Retention == 1 {
 
 		report.Warnings = append(
@@ -250,8 +288,19 @@ func populateRecommendations(cfg *config.Config, report *HealthReport) {
 		report.Recommendations = append(
 			report.Recommendations,
 			fmt.Sprintf(
-				"run gitback sync and inspect %s",
+				"run `gitback sync` and inspect %s",
 				config.MirrorsStateFile(),
+			),
+		)
+	}
+
+	if report.Quarantine.Repositories > 0 || report.Quarantine.Gists > 0 {
+
+		report.Recommendations = append(
+			report.Recommendations,
+			fmt.Sprintf(
+				"run `gitback sync` for automatic recovery; if mirrors remain quarantined afterwards, inspect them manually at %s",
+				config.QuarantineDir(cfg),
 			),
 		)
 	}
@@ -282,7 +331,10 @@ func updateStatus(cfg *config.Config, report *HealthReport) {
 	report.Status = "healthy"
 
 	if report.Repositories.Failed > 0 || report.Gists.Failed > 0 {
+		report.Status = "warning"
+	}
 
+	if report.Quarantine.Repositories > 0 || report.Quarantine.Gists > 0 {
 		report.Status = "warning"
 	}
 
