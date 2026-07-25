@@ -7,9 +7,9 @@ import (
 )
 
 var rootCmd = &cobra.Command{
-	Use:          "gitback",
-	Short:        "GitHub Backup Utility",
-	SilenceUsage: true,
+	Use:           "gitback",
+	Short:         "GitHub Backup Utility",
+	SilenceUsage:  true,
 	SilenceErrors: true,
 }
 
@@ -22,6 +22,7 @@ func init() {
 	rootCmd.AddCommand(discoverCmd)
 	rootCmd.AddCommand(syncCmd)
 	rootCmd.AddCommand(snapshotCmd)
+	rootCmd.AddCommand(runCmd)
 	rootCmd.AddCommand(doctorCmd)
 	rootCmd.AddCommand(healthCmd)
 }

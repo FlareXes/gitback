@@ -5,10 +5,6 @@ package cmd
 import (
 	"context"
 
-	"github.com/flarexes/gitback/internal/config"
-	"github.com/flarexes/gitback/internal/lock"
-	"github.com/flarexes/gitback/internal/logging"
-	"github.com/flarexes/gitback/internal/snapshot"
 	"github.com/spf13/cobra"
 )
 
@@ -20,69 +16,15 @@ var snapshotCmd = &cobra.Command{
 
 	RunE: func(cmd *cobra.Command, args []string) error {
 
-		cfg, err := config.Load()
+		cfg, logger, err := prepareRuntime()
 		if err != nil {
 			return err
 		}
-
-		if err := cfg.EnsureRuntimeDirectories(); err != nil {
-			return err
-		}
-
-		// Logging
-		logger, err := logging.New(config.LogFile())
-		if err != nil {
-			return err
-		}
-
 		defer logger.Close()
 
-		logger.Info(
-			logging.Events.Snapshot.Started,
-			"",
-		)
-
-		// Lock
-		locker := lock.New(config.LockFile())
-
-		unlock, err := locker.Acquire()
-		if err != nil {
-			return err
-		}
-
-		logger.Info(
-			logging.Events.Lock.Acquired,
-			"",
-		)
-		defer func() {
-			unlock()
-
-			logger.Info(
-				logging.Events.Lock.Released,
-				"",
-			)
-		}()
-
-		// Snapshot
-		engine := snapshot.New(cfg, logger)
-
-		if err := engine.Create(context.Background(), snapshotForce); err != nil {
-
-			logger.Error(
-				logging.Events.Snapshot.Failed,
-				"",
-				err,
-			)
-
-			return err
-		}
-
-		logger.Info(
-			logging.Events.Snapshot.Completed,
-			"",
-		)
-
-		return nil
+		return withLock(logger, func() error {
+			return executeSnapshot(context.Background(), cfg, logger, snapshotForce)
+		})
 	},
 }
 
