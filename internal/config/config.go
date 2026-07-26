@@ -223,8 +223,11 @@ func ReadConfig(cfg *Config) error {
 
 func ReadToken() (string, error) {
 
-	data, err := os.ReadFile(TokenFile())
+	if token := strings.TrimSpace(os.Getenv("GITBACK_TOKEN")); token != "" {
+		return token, nil
+	}
 
+	data, err := os.ReadFile(TokenFile())
 	if err != nil {
 		return "", err
 	}
@@ -232,7 +235,11 @@ func ReadToken() (string, error) {
 	token := strings.TrimSpace(string(data))
 
 	if token == "" {
-		return "", fmt.Errorf("github token not configured; run: gitback init")
+		return "", fmt.Errorf(
+			"github token not configured; either:\n" +
+				"  • set GITBACK_TOKEN\n" +
+				"  • run: gitback init",
+		)
 	}
 
 	return token, nil
