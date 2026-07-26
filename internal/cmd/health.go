@@ -15,18 +15,6 @@ import (
 
 var healthJSON bool
 
-func init() {
-
-	rootCmd.AddCommand(healthCmd)
-
-	healthCmd.Flags().BoolVar(
-		&healthJSON,
-		"json",
-		false,
-		"Output machine-readable JSON",
-	)
-}
-
 var healthCmd = &cobra.Command{
 	Use:   "health",
 	Short: "Show GitBack health report",
@@ -78,6 +66,16 @@ var healthCmd = &cobra.Command{
 
 		return nil
 	},
+}
+
+func init() {
+
+	healthCmd.Flags().BoolVar(
+		&healthJSON,
+		"json",
+		false,
+		"Output machine-readable JSON",
+	)
 }
 
 func logHealthReport(logFile string, report *health.HealthReport) error {
