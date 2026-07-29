@@ -121,7 +121,31 @@ It verifies:
 gitback doctor
 ```
 
-## GitHub Token Permissions
+## Authentication
+
+GitBack authenticates using a GitHub Personal Access Token (PAT).
+
+By default, `gitback init` stores the token locally.
+
+Alternatively, GitBack can read the token from the `GITBACK_TOKEN` environment variable. When present, the environment variable takes precedence over the stored token.
+
+Example:
+
+```bash
+export GITBACK_TOKEN=ghp_xxxxxxxxxxxxxxxxx
+
+gitback run
+```
+
+Users who prefer not to store credentials on disk can remove the token file after initialization:
+
+```bash
+rm ~/.local/share/gitback/state/github.token
+```
+
+GitBack will then require `GITBACK_TOKEN` to be set before running.
+
+### GitHub Token Permissions
 
 GitBack supports either a **Classic Personal Access Token** or a **Fine-Grained Personal Access Token**.
 
@@ -149,6 +173,25 @@ Metadata: Read-only
 ```
 
 Any one token type is required.
+
+### Using External Secret Managers
+
+GitBack can be used with any external secret management solution without requiring special integration.
+
+For example, using `secret-tool`:
+
+```bash
+secret-tool store  --label="GitBack GitHub Token"  github token
+```
+
+Run GitBack:
+
+```bash
+export GITBACK_TOKEN="$(secret-tool lookup github token)"
+gitback run
+```
+
+This allows the token to remain outside GitBack while still requiring no changes to GitBack itself.
 
 ## Logging
 
@@ -192,13 +235,7 @@ GitBack also generates SHA256 checksum files alongside snapshots.
 
 ## Automation
 
-Typical unattended workflow:
-
-```bash
-gitback discover
-gitback sync
-gitback snapshot --force
-```
+`gitback run` performs repository discovery, mirror synchronization, and snapshot creation as a single unattended workflow.
 
 Can be scheduled using:
 
@@ -207,6 +244,46 @@ Can be scheduled using:
 - systemd timers
     
 - CI/CD pipelines
+
+### Cron
+
+Run daily at 02:00:
+
+```cron
+0 2 * * * GITBACK_TOKEN="$(secret-tool lookup github token)" /usr/local/bin/gitback run
+```
+
+### Systemd
+
+Create: ~/.config/systemd/user/gitback.service
+
+```ini
+[Unit]
+Description=GitBack backup
+
+[Service]
+Type=oneshot
+ExecStart=/usr/local/bin/gitback run
+```
+Create: ~/.config/systemd/user/gitback.timer
+
+```ini
+[Unit]
+Description=Run GitBack daily
+
+[Timer]
+OnCalendar=daily
+Persistent=true
+
+[Install]
+WantedBy=timers.target
+```
+
+Enable service:
+
+```bash
+systemctl --user enable --now gitback.timer
+```
 
 ## Roadmap
 
