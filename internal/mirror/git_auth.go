@@ -35,7 +35,7 @@ esac
 
 	file.Close()
 
-	if err := os.Chmod(file.Name(), 0700); err != nil {
+	if err := os.Chmod(file.Name(), 0600); err != nil {
 		return "", err
 	}
 

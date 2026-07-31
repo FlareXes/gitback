@@ -38,7 +38,7 @@ var initCmd = &cobra.Command{
 
 		// Create all required directories
 		for _, dir := range dirs {
-			if err := os.MkdirAll(dir, 0600); err != nil {
+			if err := os.MkdirAll(dir, 0700); err != nil {
 				return fmt.Errorf("mkdir %s: %w", dir, err)
 			}
 
