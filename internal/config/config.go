@@ -8,6 +8,7 @@ import (
 	"path/filepath"
 	"strings"
 
+	"github.com/flarexes/gitback/internal/filesystem"
 	"github.com/flarexes/gitback/internal/logging"
 	"github.com/spf13/viper"
 )
@@ -357,23 +358,26 @@ func (cfg *Config) EnsureRuntimeDirectories() error {
 
 	for _, dir := range dirs {
 
-		if _, err := os.Stat(dir); os.IsNotExist(err) {
+		created, err := filesystem.CreateDirectory(dir)
 
-			fmt.Println("[WARN] Recreated missing directory: ", dir)
+		if err != nil {
+			return err
+		}
+
+		if created {
+
+			fmt.Println(
+				"[WARN] Recreated missing directory:",
+				dir,
+			)
 
 			logger.Warn(
 				logging.Events.Filesystem.DirectoryRecreated,
 				"",
-				fmt.Sprintf("Recreated missing directory: %s", dir),
-			)
-		}
-
-		if err := os.MkdirAll(dir, 0700); err != nil {
-
-			return fmt.Errorf(
-				"create directory %s: %w",
-				dir,
-				err,
+				fmt.Sprintf(
+					"recreated missing directory: %s",
+					dir,
+				),
 			)
 		}
 	}

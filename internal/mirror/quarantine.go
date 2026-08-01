@@ -10,6 +10,7 @@ import (
 	"time"
 
 	"github.com/flarexes/gitback/internal/config"
+	"github.com/flarexes/gitback/internal/filesystem"
 	"github.com/flarexes/gitback/internal/logging"
 )
 
@@ -41,11 +42,15 @@ func (e *Engine) quarantineMirror(target string) (string, error) {
 		relative,
 	)
 
-	if err := os.MkdirAll(
+	// Create quarantine directory structure for appropriate resource.
+	if _, err := filesystem.CreateDirectory(
 		filepath.Dir(quarantinePath),
-		0700,
 	); err != nil {
-		return "", fmt.Errorf("create quarantine directory: %w", err)
+
+		return "", fmt.Errorf(
+			"create quarantine directory: %w",
+			err,
+		)
 	}
 
 	// If a previous quarantined mirror already exists, preserve it by adding
