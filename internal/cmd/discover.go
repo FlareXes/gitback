@@ -13,12 +13,12 @@ var discoverCmd = &cobra.Command{
 	Short: "Discover GitHub repositories",
 	RunE: func(cmd *cobra.Command, args []string) error {
 
-		cfg, logger, err := prepareRuntime()
+		rt, err := prepareRuntime()
 		if err != nil {
 			return err
 		}
-		defer logger.Close()
+		defer rt.Logger.Close()
 
-		return executeDiscover(context.Background(), cfg, logger)
+		return executeDiscover(context.Background(), rt)
 	},
 }

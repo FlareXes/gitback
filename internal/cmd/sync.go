@@ -13,14 +13,14 @@ var syncCmd = &cobra.Command{
 	Short: "Sync repository mirrors",
 	RunE: func(cmd *cobra.Command, args []string) error {
 
-		cfg, logger, err := prepareRuntime()
+		rt, err := prepareRuntime()
 		if err != nil {
 			return err
 		}
-		defer logger.Close()
+		defer rt.Logger.Close()
 
-		return withLock(logger, func() error {
-			return executeSync(context.Background(), cfg, logger)
+		return withLock(rt.Logger, rt.Paths.LockFile, func() error {
+			return executeSync(context.Background(), rt)
 		})
 	},
 }

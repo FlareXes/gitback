@@ -13,6 +13,71 @@ import (
 	"github.com/spf13/viper"
 )
 
+// internal/config/config.go
+
+type Paths struct {
+	ConfigDir  string
+	ConfigFile string
+
+	DataDir string
+
+	StateDir string
+	LogDir   string
+	LogFile  string
+
+	TokenFile string
+	LockFile  string
+	TempDir   string
+
+	MirrorsStateFile        string
+	RepositoryInventoryFile string
+	GistInventoryFile       string
+
+	MirrorRoot string
+
+	RepositoryMirrorRoot string
+	GistMirrorRoot       string
+
+	SnapshotOutputDirectory string
+	QuarantineDir           string
+}
+
+func (c Config) Paths() Paths {
+	home, _ := os.UserHomeDir()
+
+	dataDir := filepath.Join(home, ".local", "share", "gitback")
+	stateDir := filepath.Join(dataDir, "state")
+	logDir := filepath.Join(home, ".local", "state", "gitback")
+	configDir := filepath.Join(home, ".config", "gitback")
+
+	return Paths{
+		ConfigDir:  configDir,
+		ConfigFile: filepath.Join(configDir, "config.toml"),
+
+		DataDir: dataDir,
+
+		StateDir: stateDir,
+		LogDir:   logDir,
+		LogFile:  filepath.Join(logDir, "gitback.log"),
+
+		TokenFile: filepath.Join(stateDir, "github.token"),
+		LockFile:  filepath.Join(os.TempDir(), "gitback.lock"),
+		TempDir:   filepath.Join(stateDir, "tmp"),
+
+		MirrorsStateFile:        filepath.Join(stateDir, "mirrors.json"),
+		RepositoryInventoryFile: filepath.Join(stateDir, "repositories.txt"),
+		GistInventoryFile:       filepath.Join(stateDir, "gists.txt"),
+
+		MirrorRoot: c.Storage.MirrorRoot,
+
+		RepositoryMirrorRoot: filepath.Join(c.Storage.MirrorRoot, "repositories"),
+		GistMirrorRoot:       filepath.Join(c.Storage.MirrorRoot, "gists"),
+
+		SnapshotOutputDirectory: c.Snapshot.OutputDirectory,
+		QuarantineDir:           filepath.Join(filepath.Dir(c.Storage.MirrorRoot), "quarantine"),
+	}
+}
+
 type Config struct {
 	GitHub   GitHubConfig
 	Storage  StorageConfig

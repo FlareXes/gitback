@@ -14,33 +14,49 @@ import (
 	"github.com/flarexes/gitback/internal/snapshot"
 )
 
+// Runtime contains everything required to execute a GitBack command.
+//
+// It is prepared once at the beginning of every command and shared
+// throughout execution.
+type Runtime struct {
+	Config *config.Config
+	Paths  config.Paths
+	Logger *logging.Logger
+}
+
 // prepareRuntime loads configuration once and ensures GitBack's runtime
 // directories exist before any command starts work.
-func prepareRuntime() (*config.Config, *logging.Logger, error) {
+func prepareRuntime() (*Runtime, error) {
 
 	cfg, err := config.Load()
 	if err != nil {
-		return nil, nil, err
+		return nil, err
 	}
 
 	if err := cfg.EnsureRuntimeDirectories(); err != nil {
-		return nil, nil, err
+		return nil, err
 	}
 
 	logger, err := logging.New(config.LogFile())
 	if err != nil {
-		return nil, nil, err
+		return nil, err
 	}
 
-	return cfg, logger, nil
+	rt := &Runtime{
+		Config: cfg,
+		Logger: logger,
+		Paths:  cfg.Paths(),
+	}
+
+	return rt, nil
 }
 
 // withLock runs fn while holding GitBack's global lock.
 // Lock acquisition and release are logged here so individual commands do not
 // need to duplicate the same boilerplate.
-func withLock(logger *logging.Logger, fn func() error) error {
+func withLock(logger *logging.Logger, lockFile string, fn func() error) error {
 
-	locker := lock.New(config.LockFile())
+	locker := lock.New(lockFile)
 
 	unlock, err := locker.Acquire()
 	if err != nil {
@@ -71,13 +87,46 @@ func withLock(logger *logging.Logger, fn func() error) error {
 	return fn()
 }
 
+// executeRun performs the unattended backup workflow under a single lock.
+// It always uses best-effort snapshot mode so unattended runs continue even if
+// a few mirrors failed to synchronize.
+func executeRun(ctx context.Context) error {
+
+	rt, err := prepareRuntime()
+	if err != nil {
+		return err
+	}
+	defer rt.Logger.Close()
+
+	return withLock(rt.Logger, rt.Paths.LockFile, func() error {
+
+		if err := executeDiscover(ctx, rt); err != nil {
+			return err
+		}
+
+		if err := executeSync(ctx, rt); err != nil {
+			return err
+		}
+
+		// Unattended runs should still produce a snapshot even when some
+		// mirrors failed earlier in the pipeline.
+		if err := executeSnapshot(ctx, rt, true); err != nil {
+			return err
+		}
+
+		return nil
+	})
+}
+
 // executeDiscover runs repository and gist discovery using the shared runtime
 // configuration and logger.
 func executeDiscover(
 	ctx context.Context,
-	cfg *config.Config,
-	logger *logging.Logger,
+	rt *Runtime,
 ) error {
+
+	logger := rt.Logger
+	cfg := rt.Config
 
 	logger.Info(
 		logging.Events.GitHub.DiscoveryStarted,
@@ -110,9 +159,11 @@ func executeDiscover(
 // configuration and logger.
 func executeSync(
 	ctx context.Context,
-	cfg *config.Config,
-	logger *logging.Logger,
+	rt *Runtime,
 ) error {
+
+	logger := rt.Logger
+	cfg := rt.Config
 
 	logger.Info(
 		logging.Events.Sync.Started,
@@ -144,10 +195,12 @@ func executeSync(
 // and logger.
 func executeSnapshot(
 	ctx context.Context,
-	cfg *config.Config,
-	logger *logging.Logger,
+	rt *Runtime,
 	force bool,
 ) error {
+
+	logger := rt.Logger
+	cfg := rt.Config
 
 	logger.Info(
 		logging.Events.Snapshot.Started,
@@ -173,35 +226,4 @@ func executeSnapshot(
 	)
 
 	return nil
-}
-
-// executeRun performs the unattended backup workflow under a single lock.
-// It always uses best-effort snapshot mode so unattended runs continue even if
-// a few mirrors failed to synchronize.
-func executeRun(ctx context.Context) error {
-
-	cfg, logger, err := prepareRuntime()
-	if err != nil {
-		return err
-	}
-	defer logger.Close()
-
-	return withLock(logger, func() error {
-
-		if err := executeDiscover(ctx, cfg, logger); err != nil {
-			return err
-		}
-
-		if err := executeSync(ctx, cfg, logger); err != nil {
-			return err
-		}
-
-		// Unattended runs should still produce a snapshot even when some
-		// mirrors failed earlier in the pipeline.
-		if err := executeSnapshot(ctx, cfg, logger, true); err != nil {
-			return err
-		}
-
-		return nil
-	})
 }

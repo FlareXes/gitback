@@ -16,14 +16,14 @@ var snapshotCmd = &cobra.Command{
 
 	RunE: func(cmd *cobra.Command, args []string) error {
 
-		cfg, logger, err := prepareRuntime()
+		rt, err := prepareRuntime()
 		if err != nil {
 			return err
 		}
-		defer logger.Close()
+		defer rt.Logger.Close()
 
-		return withLock(logger, func() error {
-			return executeSnapshot(context.Background(), cfg, logger, snapshotForce)
+		return withLock(rt.Logger, rt.Paths.LockFile, func() error {
+			return executeSnapshot(context.Background(), rt, snapshotForce)
 		})
 	},
 }
