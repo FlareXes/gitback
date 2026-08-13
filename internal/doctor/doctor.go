@@ -15,6 +15,11 @@ import (
 	"github.com/google/go-github/v88/github"
 )
 
+// Generate runs every diagnostic doctor is able to run given whatever state
+// is currently on disk. Nothing here requires a valid config — a missing
+// or invalid config is reported as a failed check, not a hard error, so
+// the rest of the checks still run and the user gets a full picture of
+// what's wrong in one pass.
 func Generate(layout rt.Layout) (*Report, error) {
 
 	report := &Report{}
@@ -22,8 +27,7 @@ func Generate(layout rt.Layout) (*Report, error) {
 	// ------------------------------------------------------------------
 	// Environment
 	//
-	// Verify prerequisites that are independent of the current GitBack
-	// installation.
+	// Prerequisites independent of any GitBack installation.
 	// ------------------------------------------------------------------
 
 	report.AddCheck(
@@ -35,12 +39,20 @@ func Generate(layout rt.Layout) (*Report, error) {
 	)
 
 	// ------------------------------------------------------------------
-	// Installation
+	// Configuration
 	//
-	// Installation-specific diagnostics require a valid GitBack
-	// configuration. If the installation cannot be identified, return the
-	// report after completing the environment checks.
+	// A missing/invalid config is reported as a failed check, not a
+	// reason to stop — everything else below is layout-based and can
+	// still be checked without it.
 	// ------------------------------------------------------------------
+
+	report.AddCheck(
+		checkFile(
+			"config file",
+			layout.ConfigFile,
+			`Run "gitback init"`,
+		),
+	)
 
 	cfg, err := config.Load(layout)
 
@@ -48,15 +60,29 @@ func Generate(layout rt.Layout) (*Report, error) {
 
 		report.AddCheck(
 			Check{
-				Name:           "configuration",
+				Name:           "config validity",
 				Success:        false,
 				Message:        err.Error(),
 				Recommendation: `Run "gitback init"`,
 			},
 		)
 
-		return report, nil
+	} else {
+
+		report.AddCheck(
+			Check{
+				Name:    "config validity",
+				Success: true,
+			},
+		)
 	}
+
+	// ------------------------------------------------------------------
+	// Filesystem
+	//
+	// Token, log, and state dir come from Layout, so they're checked
+	// regardless of whether config loaded successfully.
+	// ------------------------------------------------------------------
 
 	report.AddCheck(
 		checkFile(
@@ -65,10 +91,6 @@ func Generate(layout rt.Layout) (*Report, error) {
 			`Run "gitback init"`,
 		),
 	)
-
-	// ------------------------------------------------------------------
-	// Filesystem
-	// ------------------------------------------------------------------
 
 	report.AddCheck(
 		checkWritableFile(
@@ -84,22 +106,30 @@ func Generate(layout rt.Layout) (*Report, error) {
 		),
 	)
 
-	report.AddCheck(
-		checkDirectory(
-			"mirror directory",
-			cfg.Storage.MirrorRoot,
-		),
-	)
+	// Mirror/snapshot directories are user-configured, so these can only
+	// run once config has actually loaded.
+	if cfg != nil {
 
-	report.AddCheck(
-		checkDirectory(
-			"snapshot directory",
-			cfg.Snapshot.OutputDirectory,
-		),
-	)
+		report.AddCheck(
+			checkDirectory(
+				"mirror directory",
+				cfg.Storage.MirrorRoot,
+			),
+		)
+
+		report.AddCheck(
+			checkDirectory(
+				"snapshot directory",
+				cfg.Snapshot.OutputDirectory,
+			),
+		)
+	}
 
 	// ------------------------------------------------------------------
 	// Connectivity
+	//
+	// ReadToken checks GITBACK_TOKEN and the token file independently of
+	// config, so this still runs even if config failed to load.
 	// ------------------------------------------------------------------
 
 	token, _ := config.ReadToken(layout)

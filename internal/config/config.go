@@ -112,12 +112,25 @@ minimum_free_disk_percent = %d
 }
 
 // Load reads and validates configuration using the given Layout to locate
-// config.toml.
+// config.toml. It never falls back to defaults — a missing config file is
+// a hard error, since GitBack shouldn't silently run on unconfigured
+// defaults. Run `gitback init` to create one.
 func Load(layout runtime.Layout) (*Config, error) {
+
+	if _, err := os.Stat(layout.ConfigFile); err != nil {
+		if os.IsNotExist(err) {
+			return nil, fmt.Errorf(
+				"config file not found at %s; run `gitback init`",
+				layout.ConfigFile,
+			)
+		}
+		return nil, err
+	}
+
 	cfg := Default(layout)
 
 	if err := ReadConfig(layout, &cfg); err != nil {
-		return nil, err
+		return nil, fmt.Errorf("read config: %w", err)
 	}
 
 	if err := cfg.Validate(); err != nil {
