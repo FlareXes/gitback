@@ -6,9 +6,9 @@ import (
 	"fmt"
 	"os"
 
-	"github.com/flarexes/gitback/internal/config"
 	"github.com/flarexes/gitback/internal/doctor"
 	"github.com/flarexes/gitback/internal/logging"
+	"github.com/flarexes/gitback/internal/runtime"
 	"github.com/spf13/cobra"
 )
 
@@ -18,13 +18,18 @@ var doctorCmd = &cobra.Command{
 
 	RunE: func(cmd *cobra.Command, args []string) error {
 
-		report, err := doctor.Generate()
+		layout, err := runtime.New()
+		if err != nil {
+			return err
+		}
+
+		report, err := doctor.Generate(layout)
 
 		if err != nil {
 			return err
 		}
 
-		if err := logDoctorReport(config.LogFile(), report); err != nil {
+		if err := logDoctorReport(layout.LogFile, report); err != nil {
 
 			fmt.Fprintf(
 				os.Stderr,

@@ -7,11 +7,11 @@ import (
 	"context"
 	"fmt"
 	"os"
-	"path/filepath"
 	"strings"
 	"time"
 
 	"github.com/flarexes/gitback/internal/config"
+	"github.com/flarexes/gitback/internal/runtime"
 	"github.com/google/go-github/v88/github"
 	"github.com/spf13/cobra"
 )
@@ -20,28 +20,21 @@ var initCmd = &cobra.Command{
 	Use:   "init",
 	Short: "Initialize gitback environment",
 	RunE: func(cmd *cobra.Command, args []string) error {
-		cfg := config.Default()
+		layout, err := runtime.New()
 
-		dirs := []string{
-			filepath.Dir(config.ConfigFile()),
-
-			cfg.Storage.MirrorRoot,
-
-			cfg.Snapshot.OutputDirectory,
-
-			config.StateDir(),
-
-			filepath.Dir(config.LogFile()),
-
-			config.TempDir(),
+		if err != nil {
+			return err
+		}
+		if err := layout.EnsureDirs(); err != nil {
+			return err
 		}
 
-		// Create all required directories
-		for _, dir := range dirs {
+		cfg := config.Default(layout)
+
+		for _, dir := range []string{cfg.Storage.MirrorRoot, cfg.Snapshot.OutputDirectory} {
 			if err := os.MkdirAll(dir, 0700); err != nil {
 				return fmt.Errorf("mkdir %s: %w", dir, err)
 			}
-
 		}
 
 		fmt.Println("Create a GitHub Personal Access Token.")
@@ -102,27 +95,23 @@ var initCmd = &cobra.Command{
 			)
 		}
 
-		configPath := config.ConfigFile()
+		configPath := layout.ConfigFile
 
 		if err := config.Write(configPath, cfg); err != nil {
 			return err
 		}
 
 		// Save token separately
-		if err := os.WriteFile(config.TokenFile(), []byte(token+"\n"), 0600); err != nil {
+		if err := os.WriteFile(layout.TokenFile, []byte(token+"\n"), 0600); err != nil {
 			return err
 		}
 
-		if _, err := config.Load(); err != nil {
-
-			return fmt.Errorf(
-				"post-init validation failed: %w",
-				err,
-			)
+		if _, err := config.Load(layout); err != nil {
+			return fmt.Errorf("post-init validation failed: %w", err)
 		}
 
 		fmt.Printf("Authenticated as: %s\n", user.GetLogin())
-		fmt.Printf("Token file: %s\n", config.TokenFile())
+		fmt.Printf("Token file: %s\n", layout.TokenFile)
 		fmt.Printf("Config file: %s\n", configPath)
 
 		fmt.Println("\ngitback initialized successfully")

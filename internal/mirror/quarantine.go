@@ -9,7 +9,6 @@ import (
 	"strings"
 	"time"
 
-	"github.com/flarexes/gitback/internal/config"
 	"github.com/flarexes/gitback/internal/filesystem"
 	"github.com/flarexes/gitback/internal/logging"
 )
@@ -38,7 +37,7 @@ func (e *Engine) quarantineMirror(target string) (string, error) {
 	}
 
 	quarantinePath := filepath.Join(
-		config.QuarantineDir(e.cfg),
+		e.cfg.QuarantineDir(),
 		relative,
 	)
 
@@ -97,7 +96,7 @@ func (e *Engine) cleanupQuarantine(target string) error {
 	}
 
 	quarantine := filepath.Join(
-		config.QuarantineDir(e.cfg),
+		e.cfg.QuarantineDir(),
 		relative,
 	)
 

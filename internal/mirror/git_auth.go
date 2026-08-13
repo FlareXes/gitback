@@ -21,7 +21,7 @@ esac
 `
 
 	file, err := os.CreateTemp(
-		config.TempDir(),
+		e.layout.TempDir,
 		"gitback-askpass-*",
 	)
 	if err != nil {
@@ -44,7 +44,7 @@ esac
 
 func (e *Engine) gitEnv(askPass string) []string {
 
-	token, _ := config.ReadToken()
+	token, _ := config.ReadToken(e.layout)
 
 	env := os.Environ()
 

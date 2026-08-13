@@ -11,10 +11,11 @@ import (
 	"runtime"
 
 	"github.com/flarexes/gitback/internal/config"
+	rt "github.com/flarexes/gitback/internal/runtime"
 	"github.com/google/go-github/v88/github"
 )
 
-func Generate() (*Report, error) {
+func Generate(layout rt.Layout) (*Report, error) {
 
 	report := &Report{}
 
@@ -41,7 +42,7 @@ func Generate() (*Report, error) {
 	// report after completing the environment checks.
 	// ------------------------------------------------------------------
 
-	cfg, err := config.Load()
+	cfg, err := config.Load(layout)
 
 	if err != nil {
 
@@ -60,7 +61,7 @@ func Generate() (*Report, error) {
 	report.AddCheck(
 		checkFile(
 			"github.token file",
-			config.TokenFile(),
+			layout.TokenFile,
 			`Run "gitback init"`,
 		),
 	)
@@ -72,14 +73,14 @@ func Generate() (*Report, error) {
 	report.AddCheck(
 		checkWritableFile(
 			"log file",
-			config.LogFile(),
+			layout.LogFile,
 		),
 	)
 
 	report.AddCheck(
 		checkDirectory(
 			"state directory",
-			config.StateDir(),
+			layout.StateDir,
 		),
 	)
 
@@ -101,7 +102,7 @@ func Generate() (*Report, error) {
 	// Connectivity
 	// ------------------------------------------------------------------
 
-	token, _ := config.ReadToken()
+	token, _ := config.ReadToken(layout)
 
 	report.AddCheck(
 		checkGitHub(token),

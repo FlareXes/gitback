@@ -10,10 +10,11 @@ import (
 	"time"
 
 	"github.com/flarexes/gitback/internal/config"
+	"github.com/flarexes/gitback/internal/runtime"
 	"github.com/flarexes/gitback/internal/state"
 )
 
-func Generate(cfg *config.Config) (*HealthReport, error) {
+func Generate(cfg *config.Config, layout runtime.Layout) (*HealthReport, error) {
 
 	report := &HealthReport{
 		GeneratedAt: time.Now().
@@ -28,7 +29,7 @@ func Generate(cfg *config.Config) (*HealthReport, error) {
 		},
 	}
 
-	if err := populateAssets(cfg, report); err != nil {
+	if err := populateAssets(cfg, layout, report); err != nil {
 		return nil, err
 	}
 
@@ -51,6 +52,7 @@ func Generate(cfg *config.Config) (*HealthReport, error) {
 
 	populateRecommendations(
 		cfg,
+		layout,
 		report,
 	)
 
@@ -59,12 +61,9 @@ func Generate(cfg *config.Config) (*HealthReport, error) {
 	return report, nil
 }
 
-func populateAssets(cfg *config.Config, report *HealthReport) error {
+func populateAssets(cfg *config.Config, layout runtime.Layout, report *HealthReport) error {
 
-	data, err := state.LoadMirrors(
-		config.MirrorsStateFile(),
-	)
-
+	data, err := state.LoadMirrors(layout.MirrorsStateFile)
 	if err != nil {
 
 		report.Warnings = append(
@@ -281,7 +280,7 @@ func populateWarnings(cfg *config.Config, report *HealthReport) {
 	}
 }
 
-func populateRecommendations(cfg *config.Config, report *HealthReport) {
+func populateRecommendations(cfg *config.Config, layout runtime.Layout, report *HealthReport) {
 
 	if report.Repositories.Failed > 0 || report.Gists.Failed > 0 {
 
@@ -289,7 +288,7 @@ func populateRecommendations(cfg *config.Config, report *HealthReport) {
 			report.Recommendations,
 			fmt.Sprintf(
 				"run `gitback sync` and inspect %s",
-				config.MirrorsStateFile(),
+				layout.MirrorsStateFile,
 			),
 		)
 	}
@@ -300,7 +299,7 @@ func populateRecommendations(cfg *config.Config, report *HealthReport) {
 			report.Recommendations,
 			fmt.Sprintf(
 				"run `gitback sync` for automatic recovery; if mirrors remain quarantined afterwards, inspect them manually at %s",
-				config.QuarantineDir(cfg),
+				cfg.QuarantineDir(),
 			),
 		)
 	}

@@ -9,7 +9,6 @@ import (
 	"strings"
 	"sync"
 
-	"github.com/flarexes/gitback/internal/config"
 	"github.com/flarexes/gitback/internal/logging"
 	"github.com/flarexes/gitback/internal/state"
 )
@@ -100,13 +99,13 @@ func (e *Engine) dispatchGistJobs(jobs chan<- string) error {
 
 	defer close(jobs)
 
-	gists, err := state.ReadInventory(config.GistInventoryFile())
+	gists, err := state.ReadInventory(e.layout.GistInventoryFile)
 
 	if err != nil {
 
 		e.logger.Warn(
 			logging.Events.Inventory.Missing,
-			config.GistInventoryFile(),
+			e.layout.GistInventoryFile,
 			"gist inventory file not found",
 		)
 
@@ -121,7 +120,7 @@ func (e *Engine) dispatchGistJobs(jobs chan<- string) error {
 
 		e.logger.Warn(
 			logging.Events.Inventory.Empty,
-			config.GistInventoryFile(),
+			e.layout.GistInventoryFile,
 			"gist inventory file is empty",
 		)
 

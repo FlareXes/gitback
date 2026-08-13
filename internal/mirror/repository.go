@@ -9,7 +9,6 @@ import (
 	"strings"
 	"sync"
 
-	"github.com/flarexes/gitback/internal/config"
 	"github.com/flarexes/gitback/internal/logging"
 	"github.com/flarexes/gitback/internal/state"
 )
@@ -121,13 +120,13 @@ func (e *Engine) dispatchRepositoryJobs(jobs chan<- string) error {
 
 	defer close(jobs)
 
-	repositories, err := state.ReadInventory(config.RepositoryInventoryFile())
+	repositories, err := state.ReadInventory(e.layout.RepositoryInventoryFile)
 
 	if err != nil {
 
 		e.logger.Warn(
 			logging.Events.Inventory.Missing,
-			config.RepositoryInventoryFile(),
+			e.layout.RepositoryInventoryFile,
 			"repository inventory file not found",
 		)
 
@@ -142,7 +141,7 @@ func (e *Engine) dispatchRepositoryJobs(jobs chan<- string) error {
 
 		e.logger.Warn(
 			logging.Events.Inventory.Empty,
-			config.RepositoryInventoryFile(),
+			e.layout.RepositoryInventoryFile,
 			"inventory file is empty",
 		)
 

@@ -8,75 +8,9 @@ import (
 	"path/filepath"
 	"strings"
 
-	"github.com/flarexes/gitback/internal/filesystem"
-	"github.com/flarexes/gitback/internal/logging"
+	"github.com/flarexes/gitback/internal/runtime"
 	"github.com/spf13/viper"
 )
-
-// internal/config/config.go
-
-type Paths struct {
-	ConfigDir  string
-	ConfigFile string
-
-	DataDir string
-
-	StateDir string
-	LogDir   string
-	LogFile  string
-
-	TokenFile string
-	LockFile  string
-	TempDir   string
-
-	MirrorsStateFile        string
-	RepositoryInventoryFile string
-	GistInventoryFile       string
-
-	MirrorRoot string
-
-	RepositoryMirrorRoot string
-	GistMirrorRoot       string
-
-	SnapshotOutputDirectory string
-	QuarantineDir           string
-}
-
-func (c Config) Paths() Paths {
-	home, _ := os.UserHomeDir()
-
-	dataDir := filepath.Join(home, ".local", "share", "gitback")
-	stateDir := filepath.Join(dataDir, "state")
-	logDir := filepath.Join(home, ".local", "state", "gitback")
-	configDir := filepath.Join(home, ".config", "gitback")
-
-	return Paths{
-		ConfigDir:  configDir,
-		ConfigFile: filepath.Join(configDir, "config.toml"),
-
-		DataDir: dataDir,
-
-		StateDir: stateDir,
-		LogDir:   logDir,
-		LogFile:  filepath.Join(logDir, "gitback.log"),
-
-		TokenFile: filepath.Join(stateDir, "github.token"),
-		LockFile:  filepath.Join(os.TempDir(), "gitback.lock"),
-		TempDir:   filepath.Join(stateDir, "tmp"),
-
-		MirrorsStateFile:        filepath.Join(stateDir, "mirrors.json"),
-		RepositoryInventoryFile: filepath.Join(stateDir, "repositories.txt"),
-		GistInventoryFile:       filepath.Join(stateDir, "gists.txt"),
-
-		MirrorRoot: c.Storage.MirrorRoot,
-
-		RepositoryMirrorRoot: filepath.Join(c.Storage.MirrorRoot, "repositories"),
-		GistMirrorRoot:       filepath.Join(c.Storage.MirrorRoot, "gists"),
-
-		SnapshotOutputDirectory: c.Snapshot.OutputDirectory,
-		QuarantineDir:           filepath.Join(filepath.Dir(c.Storage.MirrorRoot), "quarantine"),
-	}
-}
 
 type Config struct {
 	GitHub   GitHubConfig
@@ -96,13 +30,11 @@ type StorageConfig struct {
 
 type SnapshotConfig struct {
 	OutputDirectory string `mapstructure:"output_directory"`
-
-	Retention int `mapstructure:"retention"`
+	Retention       int    `mapstructure:"retention"`
 }
 
 type SyncConfig struct {
-	Workers int `mapstructure:"workers"`
-
+	Workers       int `mapstructure:"workers"`
 	RetryAttempts int `mapstructure:"retry_attempts"`
 }
 
@@ -110,114 +42,44 @@ type HealthConfig struct {
 	MinimumFreeDiskPercent uint8 `mapstructure:"minimum_free_disk_percent"`
 }
 
-// Default returns the default configuration.
-func Default() Config {
-	home, _ := os.UserHomeDir()
+// RepositoryMirrorRoot, GistMirrorRoot, and QuarantineDir are DERIVED from
+// the user-configured MirrorRoot.
+func (c Config) RepositoryMirrorRoot() string {
+	return filepath.Join(c.Storage.MirrorRoot, "repositories")
+}
 
+func (c Config) GistMirrorRoot() string {
+	return filepath.Join(c.Storage.MirrorRoot, "gists")
+}
+
+func (c Config) QuarantineDir() string {
+	return filepath.Join(filepath.Dir(c.Storage.MirrorRoot), "quarantine")
+}
+
+// Default returns the default configuration, given a resolved Layout so
+// that default mirror/snapshot paths sit alongside GitBack's other data.
+func Default(layout runtime.Layout) Config {
 	return Config{
-		GitHub: GitHubConfig{
-			BackupGists: true,
-		},
-
+		GitHub: GitHubConfig{BackupGists: true},
 		Storage: StorageConfig{
-			MirrorRoot: filepath.Join(
-				home,
-				".local",
-				"share",
-				"gitback",
-				"mirrors",
-			),
+			MirrorRoot: filepath.Join(layout.DataDir, "mirrors"),
 		},
-
 		Snapshot: SnapshotConfig{
-			OutputDirectory: filepath.Join(
-				home,
-				".local",
-				"share",
-				"gitback",
-				"snapshots",
-			),
-
-			Retention: 0,
+			OutputDirectory: filepath.Join(layout.DataDir, "snapshots"),
+			Retention:       0,
 		},
-
 		Sync: SyncConfig{
-			Workers: 3,
-
+			Workers:       3,
 			RetryAttempts: 3,
 		},
-
 		Health: HealthConfig{
 			MinimumFreeDiskPercent: 20,
 		},
 	}
 }
 
-// ----------------------------------
-// Private helper functions.
-// ----------------------------------
-
-// configDirectory returns the configuration directory.
-// Because configuration location is not configurable, it is hardcoded.
-func configDirectory() string {
-
-	home, err := os.UserHomeDir()
-
-	if err != nil {
-		return "."
-	}
-
-	return filepath.Join(
-		home,
-		".config",
-		"gitback",
-	)
-}
-
-// StateDir returns the state directory.
-// Because state location is not configurable, it is hardcoded.
-func StateDir() string {
-
-	home, err := os.UserHomeDir()
-
-	if err != nil {
-		home = "."
-	}
-
-	return filepath.Join(
-		home,
-		".local",
-		"share",
-		"gitback",
-		"state",
-	)
-}
-
-// logDir returns the log directory.
-// Because log location is not configurable, it is hardcoded.
-func logDir() string {
-
-	home, err := os.UserHomeDir()
-
-	if err != nil {
-		home = "."
-	}
-
-	return filepath.Join(
-		home,
-		".local",
-		"state",
-		"gitback",
-	)
-}
-
-// ----------------------------------
-// Public methods.
-// ----------------------------------
-
 // Write writes the GitBack configuration file.
 func Write(path string, cfg Config) error {
-
 	content := fmt.Sprintf(`# GitBack configuration
 
 [github]
@@ -238,30 +100,23 @@ retry_attempts = %d
 minimum_free_disk_percent = %d
 `,
 		cfg.GitHub.BackupGists,
-
 		cfg.Storage.MirrorRoot,
-
 		cfg.Snapshot.OutputDirectory,
 		cfg.Snapshot.Retention,
-
 		cfg.Sync.Workers,
 		cfg.Sync.RetryAttempts,
-
 		cfg.Health.MinimumFreeDiskPercent,
 	)
 
-	return os.WriteFile(
-		path,
-		[]byte(content),
-		0600,
-	)
+	return os.WriteFile(path, []byte(content), 0600)
 }
 
-func Load() (*Config, error) {
+// Load reads and validates configuration using the given Layout to locate
+// config.toml.
+func Load(layout runtime.Layout) (*Config, error) {
+	cfg := Default(layout)
 
-	cfg := Default()
-
-	if err := ReadConfig(&cfg); err != nil {
+	if err := ReadConfig(layout, &cfg); err != nil {
 		return nil, err
 	}
 
@@ -272,12 +127,9 @@ func Load() (*Config, error) {
 	return &cfg, nil
 }
 
-func ReadConfig(cfg *Config) error {
-
+func ReadConfig(layout runtime.Layout, cfg *Config) error {
 	v := viper.New()
-
-	v.SetConfigFile(ConfigFile())
-
+	v.SetConfigFile(layout.ConfigFile)
 	v.AutomaticEnv()
 
 	if err := v.ReadInConfig(); err != nil {
@@ -287,19 +139,18 @@ func ReadConfig(cfg *Config) error {
 	return v.Unmarshal(cfg)
 }
 
-func ReadToken() (string, error) {
-
+// ReadToken reads the GitHub token from env or the layout's token file.
+func ReadToken(layout runtime.Layout) (string, error) {
 	if token := strings.TrimSpace(os.Getenv("GITBACK_TOKEN")); token != "" {
 		return token, nil
 	}
 
-	data, err := os.ReadFile(TokenFile())
+	data, err := os.ReadFile(layout.TokenFile)
 	if err != nil {
 		return "", err
 	}
 
 	token := strings.TrimSpace(string(data))
-
 	if token == "" {
 		return "", fmt.Errorf(
 			"github token not configured; either:\n" +
@@ -309,143 +160,4 @@ func ReadToken() (string, error) {
 	}
 
 	return token, nil
-}
-
-func ConfigFile() string {
-
-	return filepath.Join(
-		configDirectory(),
-		"config.toml",
-	)
-}
-
-func LogFile() string {
-
-	return filepath.Join(
-		logDir(),
-		"gitback.log",
-	)
-}
-
-func TokenFile() string {
-
-	return filepath.Join(
-		StateDir(),
-		"github.token",
-	)
-}
-
-func MirrorsStateFile() string {
-
-	return filepath.Join(
-		StateDir(),
-		"mirrors.json",
-	)
-}
-
-func RepositoryInventoryFile() string {
-
-	return filepath.Join(
-		StateDir(),
-		"repositories.txt",
-	)
-}
-
-func GistInventoryFile() string {
-
-	return filepath.Join(
-		StateDir(),
-		"gists.txt",
-	)
-}
-
-func LockFile() string {
-
-	return filepath.Join(
-		os.TempDir(),
-		"gitback.lock",
-	)
-}
-
-func TempDir() string {
-
-	return filepath.Join(
-		StateDir(),
-		"tmp",
-	)
-}
-
-func QuarantineDir(cfg *Config) string {
-	return filepath.Join(
-		filepath.Dir(cfg.Storage.MirrorRoot),
-		"quarantine",
-	)
-}
-
-// --------------------------------------
-// Helper functions.
-// --------------------------------------
-
-// EnsureRuntimeDirectories creates all runtime directories required by GitBack.
-//
-// Missing directories are treated as a recoverable condition.
-// This allows commands such as:
-//
-//	gitback sync
-//
-// to work even if:
-//
-//	~/.local/share/gitback/mirrors
-//	~/.local/share/gitback/state
-//	~/.local/share/gitback/tmp
-//	~/.local/share/gitback/snapshots
-//
-// were accidentally removed.
-func (cfg *Config) EnsureRuntimeDirectories() error {
-
-	dirs := []string{
-		cfg.Storage.MirrorRoot,
-
-		cfg.Snapshot.OutputDirectory,
-
-		TempDir(),
-
-		StateDir(),
-
-		logDir(),
-	}
-
-	logger, err := logging.New(LogFile())
-	if err != nil {
-		return err
-	}
-	defer logger.Close()
-
-	for _, dir := range dirs {
-
-		created, err := filesystem.CreateDirectory(dir)
-
-		if err != nil {
-			return err
-		}
-
-		if created {
-
-			fmt.Println(
-				"[WARN] Recreated missing directory:",
-				dir,
-			)
-
-			logger.Warn(
-				logging.Events.Filesystem.DirectoryRecreated,
-				"",
-				fmt.Sprintf(
-					"recreated missing directory: %s",
-					dir,
-				),
-			)
-		}
-	}
-
-	return nil
 }

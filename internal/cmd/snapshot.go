@@ -15,14 +15,13 @@ var snapshotCmd = &cobra.Command{
 	Short: "Create mirror snapshot",
 
 	RunE: func(cmd *cobra.Command, args []string) error {
-
 		rt, err := prepareRuntime()
 		if err != nil {
 			return err
 		}
 		defer rt.Logger.Close()
 
-		return withLock(rt.Logger, rt.Paths.LockFile, func() error {
+		return withLock(rt.Logger, rt.Layout.LockFile, func() error {
 			return executeSnapshot(context.Background(), rt, snapshotForce)
 		})
 	},

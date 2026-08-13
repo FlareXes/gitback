@@ -6,7 +6,6 @@ import (
 	"context"
 	"fmt"
 
-	"github.com/flarexes/gitback/internal/config"
 	"github.com/flarexes/gitback/internal/logging"
 	"github.com/flarexes/gitback/internal/state"
 	"github.com/google/go-github/v88/github"
@@ -30,7 +29,7 @@ func (c *Client) Discover(ctx context.Context) error {
 
 	// Save repository URLs to inventory file
 	if err := state.WriteInventory(
-		config.RepositoryInventoryFile(),
+		c.layout.RepositoryInventoryFile,
 		result.URLs,
 	); err != nil {
 
@@ -38,7 +37,7 @@ func (c *Client) Discover(ctx context.Context) error {
 	}
 
 	// Log discovery completion
-	c.logDiscovery("repositories", repoCount, config.RepositoryInventoryFile(), result.RateLimit)
+	c.logDiscovery("repositories", repoCount, c.layout.RepositoryInventoryFile, result.RateLimit)
 
 	// Gist
 	gistCount := 0
@@ -55,7 +54,7 @@ func (c *Client) Discover(ctx context.Context) error {
 
 		// Save gist URLs to inventory file
 		if err := state.WriteInventory(
-			config.GistInventoryFile(),
+			c.layout.GistInventoryFile,
 			result.URLs,
 		); err != nil {
 
@@ -63,7 +62,7 @@ func (c *Client) Discover(ctx context.Context) error {
 		}
 
 		// Log gist completion
-		c.logDiscovery("gists", gistCount, config.GistInventoryFile(), result.RateLimit)
+		c.logDiscovery("gists", gistCount, c.layout.GistInventoryFile, result.RateLimit)
 	}
 
 	fmt.Println()

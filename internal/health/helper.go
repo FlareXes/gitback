@@ -13,7 +13,7 @@ import (
 // countQuarantinedRepositories returns the number of quarantined repository mirrors.
 func countQuarantinedRepositories(cfg *config.Config) (int, error) {
 
-	root := filepath.Join(config.QuarantineDir(cfg), "repositories")
+	root := filepath.Join(cfg.QuarantineDir(), "repositories")
 
 	// Missing directory simply means no repositories are quarantined.
 	owners, err := os.ReadDir(root)
@@ -65,7 +65,7 @@ func countQuarantinedRepositories(cfg *config.Config) (int, error) {
 func countQuarantinedGists(cfg *config.Config) (int, error) {
 
 	root := filepath.Join(
-		config.QuarantineDir(cfg),
+		cfg.QuarantineDir(),
 		"gists",
 	)
 

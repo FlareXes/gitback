@@ -15,17 +15,20 @@ import (
 
 	"github.com/flarexes/gitback/internal/config"
 	"github.com/flarexes/gitback/internal/logging"
+	"github.com/flarexes/gitback/internal/runtime"
 	"github.com/flarexes/gitback/internal/state"
 )
 
 type Engine struct {
 	cfg    *config.Config
+	layout runtime.Layout
 	logger *logging.Logger
 }
 
-func New(cfg *config.Config, logger *logging.Logger) *Engine {
+func New(cfg *config.Config, layout runtime.Layout, logger *logging.Logger) *Engine {
 	return &Engine{
 		cfg:    cfg,
+		layout: layout,
 		logger: logger,
 	}
 }
@@ -225,7 +228,7 @@ func (e *Engine) verifyMirrors() error {
 		"",
 	)
 
-	data, err := state.LoadMirrors(config.MirrorsStateFile())
+	data, err := state.LoadMirrors(e.layout.MirrorsStateFile)
 
 	if err != nil {
 
@@ -301,7 +304,7 @@ func (e *Engine) createTar(ctx context.Context, output string) error {
 
 	mirrorRoot := e.cfg.Storage.MirrorRoot
 
-	stateDir := config.StateDir()
+	stateDir := e.layout.StateDir
 
 	cmd := exec.CommandContext(
 		ctx,
@@ -317,7 +320,7 @@ func (e *Engine) createTar(ctx context.Context, output string) error {
 		// Add mirror state file.
 		"-C",
 		stateDir,
-		filepath.Base(config.MirrorsStateFile()),
+		filepath.Base(e.layout.MirrorsStateFile),
 	)
 
 	out, err := cmd.CombinedOutput()

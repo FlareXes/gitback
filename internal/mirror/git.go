@@ -32,6 +32,7 @@ func (e *Engine) runGit(
 
 		cmd.Env = env
 
+		// Note: `err` coming from CombinedOutput doesn't contain any message, only exit code.
 		output, err := cmd.CombinedOutput()
 
 		if err == nil {

@@ -9,16 +9,19 @@ import (
 	"github.com/flarexes/gitback/internal/config"
 	"github.com/flarexes/gitback/internal/logging"
 	"github.com/flarexes/gitback/internal/state"
+	"github.com/flarexes/gitback/internal/runtime"
 )
 
 type Engine struct {
 	cfg    *config.Config
+	layout runtime.Layout
 	logger *logging.Logger
 }
 
-func New(cfg *config.Config, logger *logging.Logger) *Engine {
+func New(cfg *config.Config, layout runtime.Layout, logger *logging.Logger) *Engine {
 	return &Engine{
 		cfg:    cfg,
+		layout: layout,
 		logger: logger,
 	}
 }
@@ -58,7 +61,7 @@ func (e *Engine) Sync(ctx context.Context) error {
 
 	// Save assets metadata such URL with their failed/success status
 	if err := state.SaveMirrors(
-		config.MirrorsStateFile(),
+		e.layout.MirrorsStateFile,
 		syncStartedAt,
 		syncCompletedAt,
 		repositories,

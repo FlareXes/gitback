@@ -10,6 +10,7 @@ import (
 	"github.com/flarexes/gitback/internal/config"
 	"github.com/flarexes/gitback/internal/health"
 	"github.com/flarexes/gitback/internal/logging"
+	"github.com/flarexes/gitback/internal/runtime"
 	"github.com/spf13/cobra"
 )
 
@@ -21,24 +22,32 @@ var healthCmd = &cobra.Command{
 
 	RunE: func(cmd *cobra.Command, args []string) error {
 
-		cfg, err := config.Load()
+		layout, err := runtime.New()
 		if err != nil {
 			return err
 		}
 
-		if err := cfg.EnsureRuntimeDirectories(); err != nil {
+		if err := layout.EnsureDirs(); err != nil {
 			return err
 		}
 
-		report, err := health.Generate(
-			cfg,
-		)
-
+		cfg, err := config.Load(layout)
 		if err != nil {
 			return err
 		}
 
-		if err := logHealthReport(config.LogFile(), report); err != nil {
+		for _, dir := range []string{cfg.Storage.MirrorRoot, cfg.Snapshot.OutputDirectory} {
+			if err := os.MkdirAll(dir, 0700); err != nil {
+				return fmt.Errorf("mkdir %s: %w", dir, err)
+			}
+		}
+
+		report, err := health.Generate(cfg, layout)
+		if err != nil {
+			return err
+		}
+
+		if err := logHealthReport(layout.LogFile, report); err != nil {
 			fmt.Fprintf(
 				os.Stderr,
 				"[WARN] Failed to write health report to log: %v\n",
@@ -47,19 +56,10 @@ var healthCmd = &cobra.Command{
 		}
 
 		if healthJSON {
+			encoder := json.NewEncoder(os.Stdout)
+			encoder.SetIndent("", "  ")
 
-			encoder := json.NewEncoder(
-				os.Stdout,
-			)
-
-			encoder.SetIndent(
-				"",
-				"  ",
-			)
-
-			return encoder.Encode(
-				report,
-			)
+			return encoder.Encode(report)
 		}
 
 		health.PrintReport(report)
