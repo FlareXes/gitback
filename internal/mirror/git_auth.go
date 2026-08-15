@@ -42,11 +42,17 @@ esac
 	return file.Name(), nil
 }
 
+// gitEnv builds the environment for a git subprocess, injecting the
+// GitBack-managed token and disabling interactive prompts.
+//
+// Every key we set here is first stripped from the inherited
+// environment before we append our own value.
 func (e *Engine) gitEnv(askPass string) []string {
 
 	token, _ := config.ReadToken(e.layout)
 
 	env := os.Environ()
+	env = filterEnv(env, "GITBACK_TOKEN", "GIT_ASKPASS", "GIT_TERMINAL_PROMPT")
 
 	env = append(
 		env,
@@ -64,4 +70,33 @@ func (e *Engine) gitEnv(askPass string) []string {
 	)
 
 	return env
+}
+
+// filterEnv returns env with any entries for the given keys removed.
+// Keys are compared exactly as they appear before "=", matching how
+// os.Environ() formats entries.
+func filterEnv(env []string, keys ...string) []string {
+
+	filtered := env[:0]
+
+	for _, kv := range env {
+
+		skip := false
+
+		for _, key := range keys {
+
+			prefix := key + "="
+
+			if len(kv) >= len(prefix) && kv[:len(prefix)] == prefix {
+				skip = true
+				break
+			}
+		}
+
+		if !skip {
+			filtered = append(filtered, kv)
+		}
+	}
+
+	return filtered
 }
