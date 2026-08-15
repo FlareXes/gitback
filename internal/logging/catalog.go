@@ -16,8 +16,9 @@ type GitHubEvents struct {
 }
 
 type InventoryEvents struct {
-	Missing string
-	Empty   string
+	Missing    string
+	Empty      string
+	ReadFailed string
 }
 
 type MirrorEvents struct {
@@ -141,8 +142,9 @@ var Events = EventCatalog{
 	},
 
 	Inventory: InventoryEvents{
-		Missing: "inventory_missing",
-		Empty:   "inventory_empty",
+		Missing:    "inventory_missing",
+		Empty:      "inventory_empty",
+		ReadFailed: "inventory_read_failed",
 	},
 
 	Mirror: MirrorEvents{

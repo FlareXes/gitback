@@ -5,6 +5,7 @@ package mirror
 import (
 	"context"
 	"fmt"
+	"os"
 	"path/filepath"
 	"strings"
 	"sync"
@@ -116,6 +117,13 @@ func (e *Engine) syncRepositories(ctx context.Context) ([]state.Asset, error) {
 	return repositories, nil
 }
 
+// dispatchRepositoryJobs feeds the repository inventory to the worker
+// pool. A missing inventory file means discovery hasn't run yet and is
+// not an error — sync should still succeed with zero repositories so a
+// fresh install doesn't fail before init/discover have been run. Any
+// other read error (permissions, corruption) is real and must
+// propagate, or sync would silently process zero repositories and
+// report success.
 func (e *Engine) dispatchRepositoryJobs(jobs chan<- string) error {
 
 	defer close(jobs)
@@ -124,17 +132,34 @@ func (e *Engine) dispatchRepositoryJobs(jobs chan<- string) error {
 
 	if err != nil {
 
-		e.logger.Warn(
-			logging.Events.Inventory.Missing,
+		// If inventory file doesn't exist, return early
+		if os.IsNotExist(err) {
+			e.logger.Warn(
+				logging.Events.Inventory.Missing,
+				e.layout.RepositoryInventoryFile,
+				"repository inventory file not found",
+			)
+
+			fmt.Println(
+				"[WARN] Repository inventory missing. Run: gitback discover",
+			)
+
+			return nil
+		}
+
+		// If there's a different error reading the inventory, log it and return
+		// Such as: permission denied, file corrupted, etc.
+		e.logger.Error(
+			logging.Events.Inventory.ReadFailed,
 			e.layout.RepositoryInventoryFile,
-			"repository inventory file not found",
+			err,
 		)
 
-		fmt.Println(
-			"[WARN] Repository inventory missing. Run: gitback discover",
+		return fmt.Errorf(
+			"read repository inventory %s: %w",
+			e.layout.RepositoryInventoryFile,
+			err,
 		)
-
-		return nil
 	}
 
 	if len(repositories) == 0 {

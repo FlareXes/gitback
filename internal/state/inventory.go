@@ -40,10 +40,6 @@ func ReadInventory(path string) ([]string, error) {
 
 	file, err := os.Open(path)
 
-	if os.IsNotExist(err) {
-		return nil, nil
-	}
-
 	if err != nil {
 		return nil, err
 	}

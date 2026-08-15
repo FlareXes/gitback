@@ -5,6 +5,7 @@ package mirror
 import (
 	"context"
 	"fmt"
+	"os"
 	"path/filepath"
 	"strings"
 	"sync"
@@ -95,6 +96,10 @@ func (e *Engine) syncGists(ctx context.Context) ([]state.Asset, error) {
 	return gists, nil
 }
 
+// dispatchGistJobs feeds the gist inventory to the worker pool. Same
+// rule as dispatchRepositoryJobs: a missing inventory file just means
+// discovery hasn't run yet, but any other read failure must propagate
+// rather than being silently treated as "zero gists to sync".
 func (e *Engine) dispatchGistJobs(jobs chan<- string) error {
 
 	defer close(jobs)
@@ -103,17 +108,35 @@ func (e *Engine) dispatchGistJobs(jobs chan<- string) error {
 
 	if err != nil {
 
-		e.logger.Warn(
-			logging.Events.Inventory.Missing,
+		// If inventory file doesn't exist, return early
+		if os.IsNotExist(err) {
+
+			e.logger.Warn(
+				logging.Events.Inventory.Missing,
+				e.layout.GistInventoryFile,
+				"gist inventory file not found",
+			)
+
+			fmt.Println(
+				"[WARN] Gist inventory missing. Run: gitback discover",
+			)
+
+			return nil
+		}
+
+		// If there's a different error reading the inventory, log it and return
+		// Such as: permission denied, file corrupted, etc.
+		e.logger.Error(
+			logging.Events.Inventory.ReadFailed,
 			e.layout.GistInventoryFile,
-			"gist inventory file not found",
+			err,
 		)
 
-		fmt.Println(
-			"[WARN] Gist inventory missing. Run: gitback discover",
+		return fmt.Errorf(
+			"read gist inventory %s: %w",
+			e.layout.GistInventoryFile,
+			err,
 		)
-
-		return nil
 	}
 
 	if len(gists) == 0 {
