@@ -16,15 +16,36 @@ import (
 	"github.com/spf13/cobra"
 )
 
+var initForce bool
+
 var initCmd = &cobra.Command{
 	Use:   "init",
 	Short: "Initialize gitback environment",
 	RunE: func(cmd *cobra.Command, args []string) error {
 		layout, err := runtime.New()
-
 		if err != nil {
 			return err
 		}
+
+		found, err := existingInstallation(layout)
+		if err != nil {
+			return err
+		}
+
+		if len(found) > 0 {
+			if !initForce {
+				return fmt.Errorf(
+					"gitback appears to be already initialized (found: %s); use --force to reinitialize",
+					strings.Join(found, ", "),
+				)
+			}
+
+			fmt.Printf(
+				"[WARN] Reinitializing existing installation (found: %s)\n",
+				strings.Join(found, ", "),
+			)
+		}
+
 		if err := layout.EnsureDirs(); err != nil {
 			return err
 		}
@@ -118,4 +139,48 @@ var initCmd = &cobra.Command{
 
 		return nil
 	},
+}
+
+// existingInstallation reports which markers of a previous `gitback init`
+// are present on disk. To avoid overwriting existing data & token
+func existingInstallation(layout runtime.Layout) ([]string, error) {
+
+	candidates := []struct {
+		label string
+		path  string
+	}{
+		{"config file", layout.ConfigFile},
+		{"github token", layout.TokenFile},
+		{"mirror state", layout.MirrorsStateFile},
+		{"repository inventory", layout.RepositoryInventoryFile},
+		{"gist inventory", layout.GistInventoryFile},
+	}
+
+	var found []string
+
+	for _, c := range candidates {
+
+		_, err := os.Stat(c.path)
+
+		if err == nil {
+			found = append(found, c.label)
+			continue
+		}
+
+		if !os.IsNotExist(err) {
+			return nil, fmt.Errorf("check %s: %w", c.label, err)
+		}
+	}
+
+	return found, nil
+}
+
+func init() {
+
+	initCmd.Flags().BoolVar(
+		&initForce,
+		"force",
+		false,
+		"reinitialize even if gitback is already initialized (overwrites config.toml and github.token)",
+	)
 }
