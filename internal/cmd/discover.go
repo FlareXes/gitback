@@ -19,6 +19,8 @@ var discoverCmd = &cobra.Command{
 		}
 		defer rt.Logger.Close()
 
-		return executeDiscover(context.Background(), rt)
+		return withLock(rt.Logger, rt.Layout.LockFile, func() error {
+			return executeDiscover(context.Background(), rt)
+		})
 	},
 }
