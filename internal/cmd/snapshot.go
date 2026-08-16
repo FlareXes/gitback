@@ -21,8 +21,13 @@ var snapshotCmd = &cobra.Command{
 		}
 		defer rt.Logger.Close()
 
-		return withLock(rt.Logger, rt.Layout.LockFile, func() error {
-			return executeSnapshot(context.Background(), rt, snapshotForce)
+		// The signal-wired context is created here, outside withLock,
+		// so a signal arriving while the lock itself is being acquired
+		// is also respected, not just once inside executeSnapshot.
+		return runCancelable(func(ctx context.Context) error {
+			return withLock(rt.Logger, rt.Layout.LockFile, func() error {
+				return executeSnapshot(ctx, rt, snapshotForce)
+			})
 		})
 	},
 }

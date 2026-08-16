@@ -18,8 +18,13 @@ var syncCmd = &cobra.Command{
 		}
 		defer rt.Logger.Close()
 
-		return withLock(rt.Logger, rt.Layout.LockFile, func() error {
-			return executeSync(context.Background(), rt)
+		// The signal-wired context is created here, outside withLock,
+		// so a signal arriving while the lock itself is being acquired
+		// is also respected, not just once inside executeSync.
+		return runCancelable(func(ctx context.Context) error {
+			return withLock(rt.Logger, rt.Layout.LockFile, func() error {
+				return executeSync(ctx, rt)
+			})
 		})
 	},
 }
