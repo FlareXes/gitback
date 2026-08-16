@@ -94,7 +94,7 @@ func (e *Engine) cloneMirror(ctx context.Context, repo string, target string) er
 		e.logger.Error(
 			logging.Events.Mirror.CloneFailed,
 			repoName,
-			fmt.Errorf("%s", string(output)),
+			fmt.Errorf("%s", gitErrorMessage(output, err)),
 		)
 
 		return err
@@ -146,7 +146,7 @@ func (e *Engine) updateMirror(ctx context.Context, target string) error {
 		e.logger.Error(
 			logging.Events.Mirror.UpdateFailed,
 			repoName,
-			fmt.Errorf("%s", string(output)),
+			fmt.Errorf("%s", gitErrorMessage(output, err)),
 		)
 
 		return err
@@ -301,4 +301,26 @@ func (e *Engine) recoverCorruptMirror(
 	}
 
 	return nil
+}
+
+// gitErrorMessage picks the most useful diagnostic text available after
+// a failed runGit call. When git ran and exited non-zero, output holds
+// git's actual stderr/stdout text and err is just an *exec.ExitError
+// carrying an exit code with no message — so output is preferred. When
+// the process never started at all (e.g. permission denied on the git
+// binary), output is empty and err itself carries the real message, so
+// that's used as the fallback.
+func gitErrorMessage(output []byte, err error) string {
+
+	msg := strings.TrimSpace(string(output))
+
+	if msg != "" {
+		return msg
+	}
+
+	if err != nil {
+		return err.Error()
+	}
+
+	return "unknown error"
 }

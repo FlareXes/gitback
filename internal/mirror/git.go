@@ -11,14 +11,10 @@ import (
 )
 
 // Execute a git command with retry support.
-func (e *Engine) runGit(
-	ctx context.Context,
-	repo string,
-	env []string,
-	args ...string,
-) ([]byte, error) {
+func (e *Engine) runGit(ctx context.Context, repo string, env []string, args ...string) ([]byte, error) {
 
 	var lastErr error
+	var lastOutput []byte
 
 	retryAttempts := e.cfg.Sync.RetryAttempts
 
@@ -29,17 +25,15 @@ func (e *Engine) runGit(
 			"git",
 			args...,
 		)
-
 		cmd.Env = env
 
-		// Note: `err` coming from CombinedOutput doesn't contain any message, only exit code.
 		output, err := cmd.CombinedOutput()
-
 		if err == nil {
 			return output, nil
 		}
 
 		lastErr = err
+		lastOutput = output
 
 		if attempt == retryAttempts {
 			break
@@ -65,5 +59,5 @@ func (e *Engine) runGit(
 		time.Sleep(wait)
 	}
 
-	return nil, lastErr
+	return lastOutput, lastErr
 }
