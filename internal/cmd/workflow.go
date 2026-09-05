@@ -48,7 +48,7 @@ func prepareRuntime() (*Runtime, error) {
 		}
 	}
 
-	logger, err := logging.New(layout.LogFile)
+	logger, err := logging.New(layout.LogDir, cfg.Logging.RetentionDays)
 	if err != nil {
 		return nil, err
 	}

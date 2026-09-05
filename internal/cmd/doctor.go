@@ -24,12 +24,12 @@ var doctorCmd = &cobra.Command{
 		}
 
 		report, err := doctor.Generate(layout)
-
 		if err != nil {
 			return err
 		}
 
-		if err := logDoctorReport(layout.LogFile, report); err != nil {
+		// doctor doesn't prune old logs; retentionDays=0 disables pruning
+		if err := logDoctorReport(layout.LogDir, 0, report); err != nil {
 
 			fmt.Fprintf(
 				os.Stderr,
@@ -44,14 +44,12 @@ var doctorCmd = &cobra.Command{
 	},
 }
 
-func logDoctorReport(logFile string, report *doctor.Report) error {
+func logDoctorReport(logDir string, retentionDays int, report *doctor.Report) error {
 
-	logger, err := logging.New(logFile)
-
+	logger, err := logging.New(logDir, retentionDays)
 	if err != nil {
 		return err
 	}
-
 	defer logger.Close()
 
 	logger.Emit(
@@ -73,26 +71,18 @@ func printDoctorReport(report *doctor.Report) {
 	for _, check := range report.Checks {
 
 		if check.Success {
-
 			fmt.Printf("[OK]   %s\n", check.Name)
-
 			continue
 		}
 
 		fmt.Printf("[FAIL] %s\n", check.Name)
 
 		if check.Message != "" {
-			fmt.Printf(
-				"       Reason: %s\n",
-				check.Message,
-			)
+			fmt.Printf("       Reason: %s\n", check.Message)
 		}
 
 		if check.Recommendation != "" {
-			fmt.Printf(
-				"       Recommendation: %s\n",
-				check.Recommendation,
-			)
+			fmt.Printf("       Recommendation: %s\n", check.Recommendation)
 		}
 	}
 }

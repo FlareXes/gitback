@@ -18,6 +18,7 @@ type Config struct {
 	Sync     SyncConfig
 	Snapshot SnapshotConfig
 	Health   HealthConfig
+	Logging  LoggingConfig
 }
 
 type GitHubConfig struct {
@@ -40,6 +41,11 @@ type SyncConfig struct {
 
 type HealthConfig struct {
 	MinimumFreeDiskPercent uint8 `mapstructure:"minimum_free_disk_percent"`
+}
+
+type LoggingConfig struct {
+	// <= 0 disables pruning; log files are kept forever.
+	RetentionDays int `mapstructure:"retention_days"`
 }
 
 // RepositoryMirrorRoot, GistMirrorRoot, and QuarantineDir are DERIVED from
@@ -75,6 +81,9 @@ func Default(layout runtime.Layout) Config {
 		Health: HealthConfig{
 			MinimumFreeDiskPercent: 20,
 		},
+		Logging: LoggingConfig{
+			RetentionDays: 30,
+		},
 	}
 }
 
@@ -98,6 +107,9 @@ retry_attempts = %d
 
 [health]
 minimum_free_disk_percent = %d
+
+[logging]
+retention_days = %d
 `,
 		cfg.GitHub.BackupGists,
 		cfg.Storage.MirrorRoot,
@@ -106,6 +118,7 @@ minimum_free_disk_percent = %d
 		cfg.Sync.Workers,
 		cfg.Sync.RetryAttempts,
 		cfg.Health.MinimumFreeDiskPercent,
+		cfg.Logging.RetentionDays,
 	)
 
 	return os.WriteFile(path, []byte(content), 0600)

@@ -18,7 +18,6 @@ type Layout struct {
 	DataDir  string
 	StateDir string
 	LogDir   string
-	LogFile  string
 
 	TokenFile string
 	LockFile  string
@@ -57,7 +56,6 @@ func newFromRoot(home, tmp string) Layout {
 		DataDir:  dataDir,
 		StateDir: stateDir,
 		LogDir:   logDir,
-		LogFile:  filepath.Join(logDir, "gitback.log"),
 
 		TokenFile: filepath.Join(stateDir, "github.token"),
 		LockFile:  filepath.Join(tmp, "gitback.lock"),

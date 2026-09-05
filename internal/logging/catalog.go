@@ -113,17 +113,23 @@ type DoctorEvents struct {
 	ReportGenerated string
 }
 
+type LogRetentionEvents struct {
+	Pruned      string
+	PruneFailed string
+}
+
 type EventCatalog struct {
-	GitHub     GitHubEvents
-	Inventory  InventoryEvents
-	Mirror     MirrorEvents
-	Snapshot   SnapshotEvents
-	Lock       LockEvents
-	Health     HealthEvents
-	Restore    RestoreEvents
-	Sync       SyncEvents
-	Filesystem FilesystemEvents
-	Doctor     DoctorEvents
+	GitHub       GitHubEvents
+	Inventory    InventoryEvents
+	Mirror       MirrorEvents
+	Snapshot     SnapshotEvents
+	Lock         LockEvents
+	Health       HealthEvents
+	Restore      RestoreEvents
+	Sync         SyncEvents
+	Filesystem   FilesystemEvents
+	Doctor       DoctorEvents
+	LogRetention LogRetentionEvents
 }
 
 var Events = EventCatalog{
@@ -235,5 +241,10 @@ var Events = EventCatalog{
 
 	Doctor: DoctorEvents{
 		ReportGenerated: "doctor_report_generated",
+	},
+
+	LogRetention: LogRetentionEvents{
+		Pruned:      "log_retention_pruned",
+		PruneFailed: "log_retention_prune_failed",
 	},
 }

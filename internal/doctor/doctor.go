@@ -11,6 +11,7 @@ import (
 	"runtime"
 
 	"github.com/flarexes/gitback/internal/config"
+	"github.com/flarexes/gitback/internal/logging"
 	rt "github.com/flarexes/gitback/internal/runtime"
 	"github.com/google/go-github/v88/github"
 )
@@ -95,7 +96,7 @@ func Generate(layout rt.Layout) (*Report, error) {
 	report.AddCheck(
 		checkWritableFile(
 			"log file",
-			layout.LogFile,
+			logging.CurrentLogFilePath(layout.LogDir),
 		),
 	)
 
