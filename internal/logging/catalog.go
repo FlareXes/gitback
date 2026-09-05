@@ -90,12 +90,6 @@ type HealthEvents struct {
 	HealthReport string
 }
 
-type RestoreEvents struct {
-	Started   string
-	Completed string
-	Failed    string
-}
-
 type SyncEvents struct {
 	Started   string
 	Completed string
@@ -125,7 +119,6 @@ type EventCatalog struct {
 	Snapshot     SnapshotEvents
 	Lock         LockEvents
 	Health       HealthEvents
-	Restore      RestoreEvents
 	Sync         SyncEvents
 	Filesystem   FilesystemEvents
 	Doctor       DoctorEvents
@@ -227,12 +220,6 @@ var Events = EventCatalog{
 		RepoFailure:  "health_repo_failure",
 		StaleBackup:  "health_stale_backup",
 		HealthReport: "health_report_generated",
-	},
-
-	Restore: RestoreEvents{
-		Started:   "restore_started",
-		Completed: "restore_completed",
-		Failed:    "restore_failed",
 	},
 
 	Filesystem: FilesystemEvents{
