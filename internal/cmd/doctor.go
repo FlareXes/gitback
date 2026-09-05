@@ -28,8 +28,8 @@ var doctorCmd = &cobra.Command{
 			return err
 		}
 
-		// doctor doesn't prune old logs; retentionDays=0 disables pruning
-		if err := logDoctorReport(layout.LogDir, 0, report); err != nil {
+		// doctor doesn't prune old logs; minKeep=0, retentionDays=0 disables pruning
+		if err := logDoctorReport(layout.LogDir, 0, 0, report); err != nil {
 
 			fmt.Fprintf(
 				os.Stderr,
@@ -44,9 +44,9 @@ var doctorCmd = &cobra.Command{
 	},
 }
 
-func logDoctorReport(logDir string, retentionDays int, report *doctor.Report) error {
+func logDoctorReport(logDir string, minKeep int, retentionDays int, report *doctor.Report) error {
 
-	logger, err := logging.New(logDir, retentionDays)
+	logger, err := logging.New(logDir, minKeep, retentionDays)
 	if err != nil {
 		return err
 	}

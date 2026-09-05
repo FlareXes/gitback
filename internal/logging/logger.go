@@ -10,6 +10,7 @@ import (
 	"os"
 	"path/filepath"
 	"regexp"
+	"sort"
 	"strings"
 	"sync"
 	"time"
@@ -54,7 +55,7 @@ func CurrentLogFilePath(logDir string) string {
 // opened at start; nothing re-checks the date mid-run.
 //
 // retentionDays prunes old log files in logDir; <= 0 disables pruning.
-func New(logDir string, retentionDays int) (*Logger, error) {
+func New(logDir string, minKeep int, retentionDays int) (*Logger, error) {
 
 	// Doctor may call this before EnsureDirs has ever run, so the
 	// directory can't be assumed to already exist.
@@ -77,19 +78,48 @@ func New(logDir string, retentionDays int) (*Logger, error) {
 
 	// Best-effort: pruning must never stop gitback from running or
 	// from writing today's log, so failures are logged, not returned.
-	deleted, pruneErr := pruneOldLogs(logDir, retentionDays)
+	deleted, unrecognized, pruneErr := pruneOldLogs(logDir, minKeep, retentionDays)
 
 	if pruneErr != nil {
+		// logger.Warn(Events.LogRetention.PruneFailed, "", pruneErr.Error())
+		logger.Emit(Entry{
+			Level: Warn,
+			Event: Events.LogRetention.PruneFailed,
+			Details: map[string]any{
+				"error":              pruneErr.Error(),
+				"retentionDays":      retentionDays,
+				"minKeep":            minKeep,
+				"deleted_files":      deleted,
+				"unrecognized_files": unrecognized,
+			},
+		})
+	}
 
-		logger.Warn(Events.LogRetention.PruneFailed, "", pruneErr.Error())
+	// A file looked like a gitback log by name but its date couldn't
+	// be parsed. Surfaced rather than silently ignored forever, so a
+	// stray or corrupted filename doesn't just quietly accumulate.
+	if len(unrecognized) > 0 {
+		logger.Emit(Entry{
+			Level: Warn,
+			Event: Events.LogRetention.UnrecognizedFile,
+			Details: map[string]any{
+				"retentionDays": retentionDays,
+				"minKeep":       minKeep,
+				"count":         len(unrecognized),
+				"files":         unrecognized,
+			},
+		})
+	}
 
-	} else if deleted > 0 {
-
+	if len(deleted) > 0 {
 		logger.Emit(Entry{
 			Level: Info,
 			Event: Events.LogRetention.Pruned,
 			Details: map[string]any{
-				"deleted": deleted,
+				"retentionDays": retentionDays,
+				"minKeep":       minKeep,
+				"count":         len(deleted),
+				"files":         deleted,
 			},
 		})
 	}
@@ -99,22 +129,32 @@ func New(logDir string, retentionDays int) (*Logger, error) {
 
 // pruneOldLogs removes gitback's own log files older than retentionDays
 // retentionDays <= 0 disables pruning entirely (logs kept forever).
-func pruneOldLogs(logDir string, retentionDays int) (int, error) {
+
+// pruneOldLogs removes gitback's own log files older than retentionDays,
+// retentionDays <= 0 disables pruning entirely (logs kept forever). But
+// always keeps at least minKeep of the most recent files regardless of age.
+//
+// Returns how many files were deleted, and the names of any files that
+// matched gitback's naming pattern but whose date couldn't be parsed
+// (kept untouched, but worth surfacing rather than silently ignoring).
+func pruneOldLogs(logDir string, minKeep int, retentionDays int) ([]string, []string, error) {
 
 	if retentionDays <= 0 {
-		return 0, nil
+		return nil, nil, nil
 	}
 
 	entries, err := os.ReadDir(logDir)
 	if err != nil {
-		return 0, fmt.Errorf("read log directory: %w", err)
+		return nil, nil, fmt.Errorf("read log directory: %w", err)
 	}
 
-	// A file is kept as long as its date is on or after this day.
-	cutoff := truncateToDay(time.Now().AddDate(0, 0, -retentionDays))
+	type dated struct {
+		name string
+		date time.Time
+	}
 
-	deleted := 0
-	var lastErr error
+	var log_files []dated
+	var unrecognized []string
 
 	for _, entry := range entries {
 
@@ -129,24 +169,57 @@ func pruneOldLogs(logDir string, retentionDays int) (int, error) {
 			continue
 		}
 
-		fileDate, err := time.ParseInLocation("2006-01-02", match[1], time.Local)
+		date, err := time.ParseInLocation("2006-01-02", match[1], time.Local)
 		if err != nil {
+			// Looked like a gitback log by name, but the date portion
+			// doesn't parse (e.g. a hand-edited or corrupted name).
+			// Flagged, not deleted, and not silently dropped.
+			unrecognized = append(unrecognized, entry.Name())
 			continue
 		}
 
-		if !fileDate.Before(cutoff) {
+		log_files = append(log_files, dated{name: entry.Name(), date: date})
+	}
+
+	// Newest first, so the first minKeep entries are exactly the ones
+	// protected from age-based deletion below.
+	sort.Slice(log_files, func(i, j int) bool {
+		return log_files[i].date.After(log_files[j].date)
+	})
+
+	if minKeep < 0 {
+		minKeep = 0
+	}
+
+	protected := minKeep
+	if protected > len(log_files) {
+		protected = len(log_files)
+	}
+
+	// A file is kept as long as its date is on or after this day.
+	cutoff := truncateToDay(time.Now().AddDate(0, 0, -retentionDays))
+
+	// deleted := 0
+	var deleted []string
+	var lastErr error
+
+	// Only files beyond the protected newest-N are eligible for
+	// deletion at all.
+	for _, f := range log_files[protected:] {
+
+		if !f.date.Before(cutoff) {
 			continue
 		}
 
-		if err := os.Remove(filepath.Join(logDir, entry.Name())); err != nil {
+		if err := os.Remove(filepath.Join(logDir, f.name)); err != nil {
 			lastErr = err
 			continue
 		}
 
-		deleted++
+		deleted = append(deleted, f.name)
 	}
 
-	return deleted, lastErr
+	return deleted, unrecognized, lastErr
 }
 
 // truncateToDay strips the time-of-day component so cutoff comparisons

@@ -46,6 +46,10 @@ type HealthConfig struct {
 type LoggingConfig struct {
 	// <= 0 disables pruning; log files are kept forever.
 	RetentionDays int `mapstructure:"retention_days"`
+
+	// The N most recent log files are never deleted, regardless of
+	// RetentionDays.
+	MinKeep int `mapstructure:"min_keep"`
 }
 
 // RepositoryMirrorRoot, GistMirrorRoot, and QuarantineDir are DERIVED from
@@ -83,6 +87,7 @@ func Default(layout runtime.Layout) Config {
 		},
 		Logging: LoggingConfig{
 			RetentionDays: 30,
+			MinKeep:       30,
 		},
 	}
 }
@@ -110,6 +115,7 @@ minimum_free_disk_percent = %d
 
 [logging]
 retention_days = %d
+min_keep = %d
 `,
 		cfg.GitHub.BackupGists,
 		cfg.Storage.MirrorRoot,
@@ -119,6 +125,7 @@ retention_days = %d
 		cfg.Sync.RetryAttempts,
 		cfg.Health.MinimumFreeDiskPercent,
 		cfg.Logging.RetentionDays,
+		cfg.Logging.MinKeep,
 	)
 
 	return os.WriteFile(path, []byte(content), 0600)

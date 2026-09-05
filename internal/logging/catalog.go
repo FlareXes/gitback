@@ -108,8 +108,9 @@ type DoctorEvents struct {
 }
 
 type LogRetentionEvents struct {
-	Pruned      string
-	PruneFailed string
+	Pruned           string
+	PruneFailed      string
+	UnrecognizedFile string
 }
 
 type EventCatalog struct {
@@ -231,7 +232,8 @@ var Events = EventCatalog{
 	},
 
 	LogRetention: LogRetentionEvents{
-		Pruned:      "log_retention_pruned",
-		PruneFailed: "log_retention_prune_failed",
+		Pruned:           "log_retention_pruned",
+		PruneFailed:      "log_retention_prune_failed",
+		UnrecognizedFile: "log_retention_unrecognized_file",
 	},
 }
