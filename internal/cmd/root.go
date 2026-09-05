@@ -33,6 +33,7 @@ func init() {
 	)
 
 	initCmd.GroupID = groupSetup
+	configCmd.GroupID = groupSetup
 
 	runCmd.GroupID = groupWorkflow
 	discoverCmd.GroupID = groupWorkflow
@@ -44,6 +45,7 @@ func init() {
 	versionCmd.GroupID = groupDiagnostic
 
 	rootCmd.AddCommand(initCmd)
+	rootCmd.AddCommand(configCmd)
 	rootCmd.AddCommand(discoverCmd)
 	rootCmd.AddCommand(syncCmd)
 	rootCmd.AddCommand(snapshotCmd)

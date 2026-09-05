@@ -1,0 +1,114 @@
+# GitBack example configuration
+#
+# This file documents every setting GitBack's config.toml accepts,
+# with defaults, valid ranges, and edge-case behavior noted inline.
+# `gitback init` writes a working config.toml with sensible defaults
+# automatically — this file exists purely as a reference for tuning
+# it afterward.
+#
+# Anything NOT in this file (log file location, token file, lock file,
+# state directory, etc.) is fixed by GitBack and is not configurable —
+# see internal/runtime/layout.go if you're curious why.
+
+[github]
+
+# Whether to also discover and back up your GitHub gists, in addition
+# to repositories. Default: true.
+backup_gists = true
+
+
+[storage]
+
+# Where repository/gist mirrors are stored on disk. Must be a path
+# GitBack can create and write to. There is no maximum size check
+# built in — make sure the underlying disk has enough room for every
+# repository's full history (bare mirrors, not just latest commits).
+#
+# Changing this after mirrors already exist does NOT move existing
+# data — GitBack will start syncing fresh mirrors to the new path
+# instead. Move the old mirror_root manually first if you want to
+# relocate an existing installation.
+mirror_root = "/home/user/.local/share/gitback/mirrors"
+
+
+[snapshot]
+
+# Where compressed, checksummed snapshot archives (.tar.zst) are
+# written by `gitback snapshot`.
+output_directory = "/home/user/.local/share/gitback/snapshots"
+
+# How many recent snapshots to keep. Older snapshots (and their
+# .sha256 checksum files) are deleted automatically after each
+# successful snapshot.
+#
+# Edge cases:
+#   0 or negative -> retention is disabled entirely; snapshots
+#                    accumulate forever. You are responsible for
+#                    managing disk space in this case.
+#   1              -> only the most recent snapshot is ever kept;
+#                     every new snapshot immediately deletes the
+#                     previous one. This is a common accidental
+#                     misconfiguration — if you meant "keep at least
+#                     one", this still does that, but you have zero
+#                     history beyond the current snapshot.
+retention = 7
+
+
+[sync]
+
+# Number of repositories/gists synced concurrently. Higher values
+# finish a sync faster but increase load on GitHub's API and on your
+# local disk/network. Must be >= 1.
+#
+# If you have many workers hitting GitHub concurrently and start
+# seeing failures, GitHub's secondary (abuse-detection) rate limit may
+# be the cause — lowering this value is the usual fix.
+workers = 3
+
+# How many times to retry a failed git operation (clone/update) before
+# giving up on that repository for this run. Must be >= 1. Retries use
+# linear backoff (5s, 10s, 15s, ...). A repository that fails all
+# retries is marked failed for this run and will be retried again on
+# the next scheduled sync — it does not block other repositories.
+retry_attempts = 3
+
+
+[health]
+
+# `gitback health` reports a "critical" status when free disk space on
+# any monitored path drops below this percentage. Purely informational
+# — it does not stop a sync from running. Valid range: 0-100.
+minimum_free_disk_percent = 20
+
+
+[logging]
+
+# How many days of log files to keep. Log files are named
+# gitback-YYYY-MM-DD-weekday.log, one per calendar day (local time).
+#
+# Edge cases:
+#   0 or negative -> pruning is disabled entirely; every log file is
+#                    kept forever, regardless of min_keep below.
+retention_days = 30
+
+# Regardless of retention_days, the N most recent log files are never
+# deleted. This protects infrequent schedules — e.g. a sync that only
+# runs weekly or monthly would otherwise find every existing log past
+# the retention cutoff on its first run back after a long gap, and
+# delete all of them in a single pass, leaving nothing but that day's
+# log.
+#
+# Edge cases:
+#   0   -> no floor at all; pruning is governed purely by
+#          retention_days. This is different from disabling pruning —
+#          with retention_days = 30 and min_keep = 0, every log older
+#          than 30 days is deleted with no exceptions, which is
+#          exactly the "delete everything after a long gap" scenario
+#          min_keep normally protects against.
+#   N>0 -> the N most recent log files always survive, even if every
+#          one of them is older than retention_days.
+#
+# If you run gitback multiple times per day, min_keep in terms of
+# calendar days covered is less than min_keep itself, since multiple
+# runs on the same day still share one log file.
+min_keep = 10
