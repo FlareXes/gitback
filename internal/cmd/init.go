@@ -21,6 +21,18 @@ var initForce bool
 var initCmd = &cobra.Command{
 	Use:   "init",
 	Short: "Initialize gitback environment",
+	Long: `Init walks you through GitHub token setup and creates gitback's
+configuration file with default settings.
+
+If gitback is already initialized, init refuses to run unless --force
+is passed, to avoid silently overwriting your saved token and config.`,
+
+	Example: `  # First-time setup
+  gitback init
+
+  # Re-run setup, overwriting the existing config and token
+  gitback init --force`,
+
 	RunE: func(cmd *cobra.Command, args []string) error {
 		layout, err := runtime.New()
 		if err != nil {

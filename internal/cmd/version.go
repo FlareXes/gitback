@@ -1,3 +1,5 @@
+// internal/cmd/version.go
+
 package cmd
 
 import (
@@ -10,9 +12,18 @@ import (
 
 var showVersion bool
 
+var versionCmd = &cobra.Command{
+	Use:   "version",
+	Short: "Print gitback version information",
+	RunE: func(cmd *cobra.Command, args []string) error {
+		fmt.Printf("gitback %s\n", version.Get())
+		return nil
+	},
+}
+
 func init() {
 
-	rootCmd.PersistentFlags().BoolVarP(
+	rootCmd.Flags().BoolVarP(
 		&showVersion,
 		"version",
 		"v",
