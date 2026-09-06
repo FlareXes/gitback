@@ -57,7 +57,7 @@ func (e *Engine) cloneMirror(ctx context.Context, repo string, target string) er
 		".git",
 	)
 
-	e.logger.Emit(logging.Events.Mirror.CloneStarted, logging.WithRepo(repoName))
+	e.logger.Emit(logging.Events.Mirror.CloneStarted, logging.WithAsset(repoName))
 
 	askPass, err := e.createAskPassScript()
 	if err != nil {
@@ -89,7 +89,7 @@ func (e *Engine) cloneMirror(ctx context.Context, repo string, target string) er
 	if err != nil {
 		e.logger.Emit(
 			logging.Events.Mirror.CloneFailed,
-			logging.WithRepo(repoName),
+			logging.WithAsset(repoName),
 			logging.WithError(fmt.Errorf("%s", gitErrorMessage(output, err))),
 		)
 		return err
@@ -97,7 +97,7 @@ func (e *Engine) cloneMirror(ctx context.Context, repo string, target string) er
 
 	e.logger.Emit(
 		logging.Events.Mirror.CloneCompleted,
-		logging.WithRepo(repoName),
+		logging.WithAsset(repoName),
 		logging.WithDuration(time.Since(start)),
 	)
 
@@ -112,7 +112,7 @@ func (e *Engine) updateMirror(ctx context.Context, target string) error {
 		".git",
 	)
 
-	e.logger.Emit(logging.Events.Mirror.UpdateStarted, logging.WithRepo(repoName))
+	e.logger.Emit(logging.Events.Mirror.UpdateStarted, logging.WithAsset(repoName))
 
 	askPass, err := e.createAskPassScript()
 	if err != nil {
@@ -137,7 +137,7 @@ func (e *Engine) updateMirror(ctx context.Context, target string) error {
 
 		e.logger.Emit(
 			logging.Events.Mirror.UpdateFailed,
-			logging.WithRepo(repoName),
+			logging.WithAsset(repoName),
 			logging.WithError(fmt.Errorf("%s", gitErrorMessage(output, err))),
 		)
 
@@ -146,7 +146,7 @@ func (e *Engine) updateMirror(ctx context.Context, target string) error {
 
 	e.logger.Emit(
 		logging.Events.Mirror.UpdateCompleted,
-		logging.WithRepo(repoName),
+		logging.WithAsset(repoName),
 		logging.WithDuration(time.Since(start)),
 	)
 
@@ -170,7 +170,7 @@ func (e *Engine) syncMirror(ctx context.Context, url string, target string) erro
 
 			e.logger.Emit(
 				logging.Events.Mirror.QuarantineCleanupFailed,
-				logging.WithRepo(repoName),
+				logging.WithAsset(repoName),
 				logging.WithError(err),
 			)
 		}
@@ -189,7 +189,7 @@ func (e *Engine) syncMirror(ctx context.Context, url string, target string) erro
 
 			e.logger.Emit(
 				logging.Events.Mirror.CorruptionDetected,
-				logging.WithRepo(repoName),
+				logging.WithAsset(repoName),
 				logging.WithCause(logging.CauseCorruption),
 			)
 
@@ -204,14 +204,14 @@ func (e *Engine) syncMirror(ctx context.Context, url string, target string) erro
 
 				e.logger.Emit(
 					logging.Events.Mirror.RecoveryFailed,
-					logging.WithRepo(repoName),
+					logging.WithAsset(repoName),
 					logging.WithError(rerr),
 				)
 
 				return rerr
 			}
 
-			e.logger.Emit(logging.Events.Mirror.RecoverySucceeded, logging.WithRepo(repoName))
+			e.logger.Emit(logging.Events.Mirror.RecoverySucceeded, logging.WithAsset(repoName))
 
 			return nil
 		}
@@ -265,7 +265,7 @@ func (e *Engine) recoverCorruptMirror(
 	if err := os.RemoveAll(quarantine); err != nil {
 		e.logger.Emit(
 			logging.Events.Mirror.QuarantineCleanupFailed,
-			logging.WithRepo(filepath.Base(target)),
+			logging.WithAsset(filepath.Base(target)),
 			logging.WithError(err),
 		)
 	}

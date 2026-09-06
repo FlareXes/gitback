@@ -48,7 +48,7 @@ func (e *Engine) runGit(ctx context.Context, repo string, env []string, args ...
 
 		e.logger.Emit(
 			logging.Events.Mirror.Retry,
-			logging.WithRepo(repo),
+			logging.WithAsset(repo),
 			logging.WithDetails(map[string]any{
 				"attempt":      attempt,
 				"max_attempts": retryAttempts,

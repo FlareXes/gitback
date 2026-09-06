@@ -111,10 +111,10 @@ type Entry struct {
 
 	// --- Context: populated when relevant ---
 
-	// Repo names the specific repository or gist this entry concerns.
+	// Asset names the specific repository or gist this entry concerns.
 	// Empty for entries that aren't about one specific mirror (e.g. a
 	// run-level summary).
-	Repo string `json:"repo,omitempty"`
+	Asset string `json:"repo,omitempty"`
 
 	DurationMS int64 `json:"duration_ms,omitempty"`
 

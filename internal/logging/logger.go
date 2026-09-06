@@ -242,9 +242,9 @@ func (l *Logger) Close() error {
 // Option customizes one Entry beyond what its EventDef fixes.
 type Option func(*Entry)
 
-// WithRepo sets the specific repository or gist this entry concerns.
-func WithRepo(name string) Option {
-	return func(e *Entry) { e.Repo = name }
+// WithAsset sets the specific repository or gist this entry concerns.
+func WithAsset(name string) Option {
+	return func(e *Entry) { e.Asset = name }
 }
 
 // WithDuration records how long the described operation took.

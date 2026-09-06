@@ -23,7 +23,7 @@ func (e *Engine) quarantineMirror(target string) (string, error) {
 		".git",
 	)
 
-	e.logger.Emit(logging.Events.Mirror.QuarantineStarted, logging.WithRepo(repoName))
+	e.logger.Emit(logging.Events.Mirror.QuarantineStarted, logging.WithAsset(repoName))
 
 	relative, err := filepath.Rel(
 		e.cfg.Storage.MirrorRoot,
@@ -60,7 +60,7 @@ func (e *Engine) quarantineMirror(target string) (string, error) {
 
 		e.logger.Emit(
 			logging.Events.Mirror.QuarantineFailed,
-			logging.WithRepo(repoName),
+			logging.WithAsset(repoName),
 			logging.WithError(err),
 		)
 
@@ -69,7 +69,7 @@ func (e *Engine) quarantineMirror(target string) (string, error) {
 
 	e.logger.Emit(
 		logging.Events.Mirror.QuarantineCompleted,
-		logging.WithRepo(repoName),
+		logging.WithAsset(repoName),
 		logging.WithDetails(map[string]any{
 			"quarantine_path": quarantinePath,
 		}),
@@ -109,7 +109,7 @@ func (e *Engine) cleanupQuarantine(target string) error {
 		return err
 	}
 
-	e.logger.Emit(logging.Events.Mirror.QuarantineCleanupCompleted, logging.WithRepo(repoName))
+	e.logger.Emit(logging.Events.Mirror.QuarantineCleanupCompleted, logging.WithAsset(repoName))
 
 	return nil
 }
