@@ -134,10 +134,10 @@ func (e *Engine) dispatchRepositoryJobs(jobs chan<- string) error {
 
 		// If inventory file doesn't exist, return early
 		if os.IsNotExist(err) {
-			e.logger.Warn(
+
+			e.logger.Emit(
 				logging.Events.Inventory.Missing,
-				e.layout.RepositoryInventoryFile,
-				"repository inventory file not found",
+				logging.WithDetails(map[string]any{"inventory_file": e.layout.RepositoryInventoryFile}),
 			)
 
 			fmt.Println(
@@ -149,10 +149,10 @@ func (e *Engine) dispatchRepositoryJobs(jobs chan<- string) error {
 
 		// If there's a different error reading the inventory, log it and return
 		// Such as: permission denied, file corrupted, etc.
-		e.logger.Error(
+		e.logger.Emit(
 			logging.Events.Inventory.ReadFailed,
-			e.layout.RepositoryInventoryFile,
-			err,
+			logging.WithError(err),
+			logging.WithDetails(map[string]any{"inventory_file": e.layout.RepositoryInventoryFile}),
 		)
 
 		return fmt.Errorf(
@@ -164,10 +164,9 @@ func (e *Engine) dispatchRepositoryJobs(jobs chan<- string) error {
 
 	if len(repositories) == 0 {
 
-		e.logger.Warn(
+		e.logger.Emit(
 			logging.Events.Inventory.Empty,
-			e.layout.RepositoryInventoryFile,
-			"inventory file is empty",
+			logging.WithDetails(map[string]any{"inventory_file": e.layout.RepositoryInventoryFile}),
 		)
 
 		fmt.Println(

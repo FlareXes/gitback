@@ -73,16 +73,12 @@ func (c *Client) Discover(ctx context.Context) error {
 	}
 
 	c.logger.Emit(
-		logging.Entry{
-			Level: logging.Info,
-			Event: logging.Events.GitHub.DiscoverySummary,
-
-			Details: map[string]any{
-				"repositories": repoCount,
-				"gists":        gistCount,
-				"total":        repoCount + gistCount,
-			},
-		},
+		logging.Events.GitHub.DiscoverySummary,
+		logging.WithDetails(map[string]any{
+			"repositories": repoCount,
+			"gists":        gistCount,
+			"total":        repoCount + gistCount,
+		}),
 	)
 
 	return nil
@@ -96,40 +92,28 @@ func (c *Client) logDiscovery(
 ) {
 
 	c.logger.Emit(
-		logging.Entry{
-			Level: logging.Info,
-			Event: logging.Events.GitHub.InventoryLoaded,
-
-			Details: map[string]any{
-				"resource": resource,
-				"count":    count,
-				"path":     inventoryPath,
-			},
-		},
+		logging.Events.GitHub.InventoryLoaded,
+		logging.WithDetails(map[string]any{
+			"resource": resource,
+			"count":    count,
+			"path":     inventoryPath,
+		}),
 	)
 
 	c.logger.Emit(
-		logging.Entry{
-			Level: logging.Info,
-			Event: logging.Events.GitHub.DiscoveryCompleted,
-
-			Details: map[string]any{
-				"resource": resource,
-				"count":    count,
-			},
-		},
+		logging.Events.GitHub.DiscoveryCompleted,
+		logging.WithDetails(map[string]any{
+			"resource": resource,
+			"count":    count,
+		}),
 	)
 
 	c.logger.Emit(
-		logging.Entry{
-			Level: logging.Info,
-			Event: logging.Events.GitHub.RateLimit,
-
-			Details: map[string]any{
-				"resource":  resource,
-				"limit":     rate.Limit,
-				"remaining": rate.Remaining,
-			},
-		},
+		logging.Events.GitHub.RateLimit,
+		logging.WithDetails(map[string]any{
+			"resource":  resource,
+			"limit":     rate.Limit,
+			"remaining": rate.Remaining,
+		}),
 	)
 }

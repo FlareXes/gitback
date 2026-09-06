@@ -47,21 +47,13 @@ func (e *Engine) Create(ctx context.Context, force bool) error {
 	fmt.Println("[1/5] Verifying mirrors")
 	if err := e.verifyMirrors(); err != nil {
 
-		e.logger.Error(
-			logging.Events.Snapshot.VerificationFailed,
-			"",
-			err,
-		)
+		e.logger.Emit(logging.Events.Snapshot.VerificationFailed, logging.WithError(err))
 
 		if !force {
 			return err
 		}
 
-		e.logger.Warn(
-			logging.Events.Snapshot.VerificationFailed,
-			"",
-			"snapshot --force mode enabled, continuing snapshot",
-		)
+		e.logger.Emit(logging.Events.Snapshot.VerificationFailed)
 	}
 
 	timestamp := time.Now().
@@ -77,11 +69,7 @@ func (e *Engine) Create(ctx context.Context, force bool) error {
 
 		err_msg := fmt.Errorf("temporary archive already exists: %s", tarFile)
 
-		e.logger.Error(
-			logging.Events.Snapshot.CollisionDetected,
-			"",
-			err_msg,
-		)
+		e.logger.Emit(logging.Events.Snapshot.CollisionDetected, logging.WithError(err_msg))
 
 		return err_msg
 	}
@@ -91,20 +79,13 @@ func (e *Engine) Create(ctx context.Context, force bool) error {
 
 		err_msg := fmt.Errorf("snapshot already exists: %s", archiveFile)
 
-		e.logger.Error(
-			logging.Events.Snapshot.CollisionDetected,
-			"",
-			err_msg,
-		)
+		e.logger.Emit(logging.Events.Snapshot.CollisionDetected, logging.WithError(err_msg))
 
 		return err_msg
 	}
 
 	// Create tar archive.
-	e.logger.Info(
-		logging.Events.Snapshot.ArchiveStarted,
-		"",
-	)
+	e.logger.Emit(logging.Events.Snapshot.ArchiveStarted)
 
 	fmt.Println("[2/5] Creating archive")
 
@@ -113,24 +94,16 @@ func (e *Engine) Create(ctx context.Context, force bool) error {
 	}
 
 	e.logger.Emit(
-		logging.Entry{
-			Level: logging.Info,
-			Event: logging.Events.Snapshot.ArchiveCompleted,
-
-			Details: map[string]any{
-				"archive": tarFile,
-			},
-		},
-	)
+		logging.Events.Snapshot.ArchiveCompleted,
+		logging.WithDetails(map[string]any{
+			"archive": tarFile,
+		}))
 
 	// Always cleanup temporary tar file.
 	defer os.Remove(tarFile)
 
 	// Compress archive.
-	e.logger.Info(
-		logging.Events.Snapshot.CompressionStarted,
-		"",
-	)
+	e.logger.Emit(logging.Events.Snapshot.CompressionStarted)
 
 	fmt.Println("[3/5] Compressing archive")
 
@@ -139,21 +112,14 @@ func (e *Engine) Create(ctx context.Context, force bool) error {
 	}
 
 	e.logger.Emit(
-		logging.Entry{
-			Level: logging.Info,
-			Event: logging.Events.Snapshot.CompressionCompleted,
-
-			Details: map[string]any{
-				"archive": archiveFile,
-			},
-		},
+		logging.Events.Snapshot.CompressionCompleted,
+		logging.WithDetails(map[string]any{
+			"archive": archiveFile,
+		}),
 	)
 
 	// Generate checksum.
-	e.logger.Info(
-		logging.Events.Snapshot.ChecksumStarted,
-		"",
-	)
+	e.logger.Emit(logging.Events.Snapshot.ChecksumStarted)
 
 	fmt.Println("[4/5] Generating checksum")
 
@@ -162,43 +128,30 @@ func (e *Engine) Create(ctx context.Context, force bool) error {
 	}
 
 	e.logger.Emit(
-		logging.Entry{
-			Level: logging.Info,
-			Event: logging.Events.Snapshot.ChecksumCompleted,
-
-			Details: map[string]any{
-				"checksum": checksumFile,
-			},
-		},
+		logging.Events.Snapshot.ChecksumCompleted,
+		logging.WithDetails(map[string]any{
+			"checksum": checksumFile,
+		}),
 	)
 
 	// Apply retention policy.
 	fmt.Println("[5/5] Applying retention policy")
 	if err := ApplyRetention(e.cfg, e.logger); err != nil {
 
-		e.logger.Error(
-			logging.Events.Snapshot.RetentionFailed,
-			"",
-			err,
-		)
+		e.logger.Emit(logging.Events.Snapshot.RetentionFailed, logging.WithError(err))
 	}
 
 	fmt.Println()
 	fmt.Println("Snapshot saved at " + archiveFile)
 
 	e.logger.Emit(
-		logging.Entry{
-			Level: logging.Info,
-			Event: logging.Events.Snapshot.Summary,
-
-			DurationMS: time.Since(start).Milliseconds(),
-
-			Details: map[string]any{
-				"archive":    archiveFile,
-				"checksum":   checksumFile,
-				"force_mode": force,
-			},
-		},
+		logging.Events.Snapshot.Summary,
+		logging.WithDuration(time.Since(start)),
+		logging.WithDetails(map[string]any{
+			"archive":    archiveFile,
+			"checksum":   checksumFile,
+			"force_mode": force,
+		}),
 	)
 
 	return nil
@@ -223,10 +176,7 @@ func (e *Engine) verifyDependencies() error {
 // verifyMirrors checks the health of all mirrored repositories.
 func (e *Engine) verifyMirrors() error {
 
-	e.logger.Info(
-		logging.Events.Snapshot.VerificationStarted,
-		"",
-	)
+	e.logger.Emit(logging.Events.Snapshot.VerificationStarted)
 
 	data, err := state.LoadMirrors(e.layout.MirrorsStateFile)
 
@@ -287,10 +237,7 @@ func (e *Engine) verifyMirrors() error {
 		return fmt.Errorf("%s", builder.String())
 	}
 
-	e.logger.Info(
-		logging.Events.Snapshot.VerificationPassed,
-		"",
-	)
+	e.logger.Emit(logging.Events.Snapshot.VerificationPassed)
 
 	return nil
 }

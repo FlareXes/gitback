@@ -20,10 +20,7 @@ func (e *Engine) validateMirror(ctx context.Context, target string) error {
 		".git",
 	)
 
-	e.logger.Info(
-		logging.Events.Mirror.FsckStarted,
-		repoName,
-	)
+	e.logger.Emit(logging.Events.Mirror.FsckStarted, logging.WithRepo(repoName))
 
 	fsck := exec.CommandContext(
 		ctx,
@@ -43,19 +40,17 @@ func (e *Engine) validateMirror(ctx context.Context, target string) error {
 			strings.TrimSpace(string(output)),
 		)
 
-		e.logger.Error(
+		e.logger.Emit(
 			logging.Events.Mirror.FsckFailed,
-			repoName,
-			fsckErr,
+			logging.WithRepo(repoName),
+			logging.WithError(fsckErr),
+			logging.WithCause(logging.CauseCorruption),
 		)
 
 		return fsckErr
 	}
 
-	e.logger.Info(
-		logging.Events.Mirror.FsckCompleted,
-		repoName,
-	)
+	e.logger.Emit(logging.Events.Mirror.FsckCompleted, logging.WithRepo(repoName))
 
 	return nil
 }

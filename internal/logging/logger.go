@@ -18,10 +18,10 @@ import (
 
 type Logger struct {
 	runID string
+	host  string
 
 	encoder *json.Encoder
-
-	file *os.File
+	file    *os.File
 
 	mu sync.Mutex
 }
@@ -72,59 +72,53 @@ func New(logDir string, minKeep int, retentionDays int) (*Logger, error) {
 
 	logger := &Logger{
 		runID:   generateRunID(),
+		host:    hostname(),
 		encoder: json.NewEncoder(file),
 		file:    file,
 	}
+
+	logger.Emit(Events.LogRetention.PruneStarted, WithDetails(map[string]any{
+		"minKeep":       minKeep,
+		"retentionDays": retentionDays,
+	}))
 
 	// Best-effort: pruning must never stop gitback from running or
 	// from writing today's log, so failures are logged, not returned.
 	deleted, unrecognized, pruneErr := pruneOldLogs(logDir, minKeep, retentionDays)
 
 	if pruneErr != nil {
-		// logger.Warn(Events.LogRetention.PruneFailed, "", pruneErr.Error())
-		logger.Emit(Entry{
-			Level: Warn,
-			Event: Events.LogRetention.PruneFailed,
-			Details: map[string]any{
-				"error":              pruneErr.Error(),
-				"retentionDays":      retentionDays,
-				"minKeep":            minKeep,
-				"deleted_files":      deleted,
-				"unrecognized_files": unrecognized,
-			},
-		})
+		logger.Emit(Events.LogRetention.PruneFailed, WithError(pruneErr))
 	}
 
 	// A file looked like a gitback log by name but its date couldn't
 	// be parsed. Surfaced rather than silently ignored forever, so a
 	// stray or corrupted filename doesn't just quietly accumulate.
 	if len(unrecognized) > 0 {
-		logger.Emit(Entry{
-			Level: Warn,
-			Event: Events.LogRetention.UnrecognizedFile,
-			Details: map[string]any{
-				"retentionDays": retentionDays,
-				"minKeep":       minKeep,
-				"count":         len(unrecognized),
-				"files":         unrecognized,
-			},
-		})
+		logger.Emit(Events.LogRetention.UnrecognizedFile, WithDetails(map[string]any{
+			"count": len(unrecognized),
+			"files": unrecognized,
+		}))
 	}
 
 	if len(deleted) > 0 {
-		logger.Emit(Entry{
-			Level: Info,
-			Event: Events.LogRetention.Pruned,
-			Details: map[string]any{
-				"retentionDays": retentionDays,
-				"minKeep":       minKeep,
-				"count":         len(deleted),
-				"files":         deleted,
-			},
-		})
+		logger.Emit(Events.LogRetention.Pruned, WithDetails(map[string]any{
+			"count": len(deleted),
+			"files": deleted,
+		}))
 	}
 
 	return logger, nil
+}
+
+// hostname resolves the machine's hostname once, for correlating log
+// entries across a fleet of machines in a central SIEM. Falls back to
+// "unknown" rather than failing Logger creation over this.
+func hostname() string {
+	name, err := os.Hostname()
+	if err != nil || name == "" {
+		return "unknown"
+	}
+	return name
 }
 
 // pruneOldLogs removes gitback's own log files older than retentionDays
@@ -230,85 +224,82 @@ func truncateToDay(t time.Time) time.Time {
 }
 
 func (l *Logger) Close() error {
-
 	if l.file == nil {
 		return nil
 	}
-
 	return l.file.Close()
 }
 
-func (l *Logger) Emit(entry Entry) {
+// Option customizes one Entry beyond what its EventDef fixes.
+type Option func(*Entry)
+
+// WithRepo sets the specific repository or gist this entry concerns.
+func WithRepo(name string) Option {
+	return func(e *Entry) { e.Repo = name }
+}
+
+// WithDuration records how long the described operation took.
+func WithDuration(d time.Duration) Option {
+	return func(e *Entry) { e.DurationMS = d.Milliseconds() }
+}
+
+// WithError attaches the raw, free-text message of the underlying
+// error. Safe to call with a nil error — it's a no-op in that case, so
+// call sites don't need their own nil check first.
+func WithError(err error) Option {
+	return func(e *Entry) {
+		if err != nil {
+			e.Error = err.Error()
+		}
+	}
+}
+
+// WithCause classifies the failure into one of the fixed Cause
+// categories. Only use when the call site genuinely knows the
+// category for certain — never guess.
+func WithCause(cause Cause) Option {
+	return func(e *Entry) { e.Cause = cause }
+}
+
+// WithRemediation overrides this event's default Remediation with more
+// specific guidance — typically because the call site has a concrete
+// path or value the generic default can't include.
+func WithRemediation(text string) Option {
+	return func(e *Entry) { e.Remediation = text }
+}
+
+// WithDetails attaches structured, event-specific data (counts, name
+// lists) that doesn't fit Entry's named fields. Not for narrative text
+// — see Entry.Details's doc comment.
+func WithDetails(details any) Option {
+	return func(e *Entry) { e.Details = details }
+}
+
+// Emit writes one log entry for def, applying any opts on top of its
+// defaults. def is always one of the values declared in catalog.go —
+// there is no way to log an event that isn't declared there.
+func (l *Logger) Emit(def EventDef, opts ...Option) {
 
 	l.mu.Lock()
 	defer l.mu.Unlock()
 
-	// Local time, not UTC: readable at a glance for a human, and
-	// RFC3339's numeric offset (e.g. "-07:00") still lets any log
-	// consumer — a SIEM, jq, whatever — convert to UTC deterministically.
-	entry.Timestamp = time.Now().Format(time.RFC3339)
+	entry := Entry{
+		SchemaVersion: schemaVersion,
+		Timestamp:     time.Now().Format(time.RFC3339),
+		Level:         def.Level,
+		RunID:         l.runID,
+		Host:          l.host,
+		Component:     def.Component,
+		Event:         def.Component + "." + def.Code,
+		Message:       def.Message,
+		Remediation:   def.Remediation,
+	}
 
-	if entry.RunID == "" {
-		entry.RunID = l.runID
+	for _, opt := range opts {
+		opt(&entry)
 	}
 
 	_ = l.encoder.Encode(entry)
-}
-
-func (l *Logger) Info(event string, repo string) {
-	l.Emit(Entry{
-		Level: Info,
-		Event: event,
-		Repo:  repo,
-	})
-}
-
-func (l *Logger) Warn(
-	event string,
-	repo string,
-	message string,
-) {
-	l.Emit(Entry{
-		Level: Warn,
-		Event: event,
-		Repo:  repo,
-		Details: map[string]any{
-			"message": message,
-		},
-	})
-}
-
-func (l *Logger) Error(
-	event string,
-	repo string,
-	err error,
-) {
-
-	var errString string
-
-	if err != nil {
-		errString = err.Error()
-	}
-
-	l.Emit(Entry{
-		Level: Error,
-		Event: event,
-		Repo:  repo,
-		Error: errString,
-	})
-}
-
-func (l *Logger) Duration(
-	event string,
-	repo string,
-	duration time.Duration,
-) {
-	l.Emit(Entry{
-		Level:      Info,
-		Event:      event,
-		Repo:       repo,
-		DurationMS: duration.Milliseconds(),
-	})
 }
 
 func generateRunID() string {
@@ -316,10 +307,7 @@ func generateRunID() string {
 	buf := make([]byte, 4)
 
 	if _, err := rand.Read(buf); err != nil {
-
-		return time.Now().
-			UTC().
-			Format("20060102150405")
+		return time.Now().UTC().Format("20060102150405")
 	}
 
 	return hex.EncodeToString(buf)

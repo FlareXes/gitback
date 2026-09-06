@@ -8,8 +8,8 @@ import (
 
 	"github.com/flarexes/gitback/internal/config"
 	"github.com/flarexes/gitback/internal/logging"
-	"github.com/flarexes/gitback/internal/state"
 	"github.com/flarexes/gitback/internal/runtime"
+	"github.com/flarexes/gitback/internal/state"
 )
 
 type Engine struct {
@@ -68,11 +68,7 @@ func (e *Engine) Sync(ctx context.Context) error {
 		gists,
 	); err != nil {
 
-		e.logger.Error(
-			logging.Events.Mirror.StateSaveFailed,
-			"",
-			err,
-		)
+		e.logger.Emit(logging.Events.Mirror.StateSaveFailed, logging.WithError(err))
 
 		return err
 	}
@@ -114,21 +110,18 @@ func (e *Engine) logSyncSummary(
 
 	// Run-level summary event.
 	e.logger.Emit(
-		logging.Entry{
-			Level:      logging.Info,
-			Event:      logging.Events.Sync.Summary,
-			DurationMS: time.Since(syncStartedAt).Milliseconds(),
+		logging.Events.Sync.Summary,
+		logging.WithDuration(time.Since(syncStartedAt)),
+		logging.WithDetails(map[string]any{
+			"repositories_total":   len(repositories),
+			"repositories_healthy": repositoryHealthy,
+			"repositories_failed":  repositoryFailed,
 
-			Details: map[string]any{
-				"repositories_total":   len(repositories),
-				"repositories_healthy": repositoryHealthy,
-				"repositories_failed":  repositoryFailed,
-
-				"gists_enabled": e.cfg.GitHub.BackupGists,
-				"gists_total":   len(gists),
-				"gists_healthy": gistHealthy,
-				"gists_failed":  gistFailed,
-			},
-		},
+			"gists_enabled": e.cfg.GitHub.BackupGists,
+			"gists_total":   len(gists),
+			"gists_healthy": gistHealthy,
+			"gists_failed":  gistFailed,
+		}),
 	)
+
 }

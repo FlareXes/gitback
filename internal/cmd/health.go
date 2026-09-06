@@ -41,13 +41,10 @@ var healthCmd = &cobra.Command{
 		// Every health check is logged for later auditing, regardless
 		// of output format below.
 		rt.Logger.Emit(
-			logging.Entry{
-				Level: logging.Info,
-				Event: logging.Events.Health.HealthReport,
-				Details: map[string]any{
-					"report": report,
-				},
-			},
+			logging.Events.Health.HealthReport,
+			logging.WithDetails(map[string]any{
+				"report": report,
+			}),
 		)
 
 		if healthJSON {

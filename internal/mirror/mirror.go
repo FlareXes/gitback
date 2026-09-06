@@ -57,10 +57,7 @@ func (e *Engine) cloneMirror(ctx context.Context, repo string, target string) er
 		".git",
 	)
 
-	e.logger.Info(
-		logging.Events.Mirror.CloneStarted,
-		repoName,
-	)
+	e.logger.Emit(logging.Events.Mirror.CloneStarted, logging.WithRepo(repoName))
 
 	askPass, err := e.createAskPassScript()
 	if err != nil {
@@ -90,20 +87,18 @@ func (e *Engine) cloneMirror(ctx context.Context, repo string, target string) er
 	)
 
 	if err != nil {
-
-		e.logger.Error(
+		e.logger.Emit(
 			logging.Events.Mirror.CloneFailed,
-			repoName,
-			fmt.Errorf("%s", gitErrorMessage(output, err)),
+			logging.WithRepo(repoName),
+			logging.WithError(fmt.Errorf("%s", gitErrorMessage(output, err))),
 		)
-
 		return err
 	}
 
-	e.logger.Duration(
+	e.logger.Emit(
 		logging.Events.Mirror.CloneCompleted,
-		repoName,
-		time.Since(start),
+		logging.WithRepo(repoName),
+		logging.WithDuration(time.Since(start)),
 	)
 
 	return nil
@@ -117,10 +112,7 @@ func (e *Engine) updateMirror(ctx context.Context, target string) error {
 		".git",
 	)
 
-	e.logger.Info(
-		logging.Events.Mirror.UpdateStarted,
-		repoName,
-	)
+	e.logger.Emit(logging.Events.Mirror.UpdateStarted, logging.WithRepo(repoName))
 
 	askPass, err := e.createAskPassScript()
 	if err != nil {
@@ -143,19 +135,19 @@ func (e *Engine) updateMirror(ctx context.Context, target string) error {
 
 	if err != nil {
 
-		e.logger.Error(
+		e.logger.Emit(
 			logging.Events.Mirror.UpdateFailed,
-			repoName,
-			fmt.Errorf("%s", gitErrorMessage(output, err)),
+			logging.WithRepo(repoName),
+			logging.WithError(fmt.Errorf("%s", gitErrorMessage(output, err))),
 		)
 
 		return err
 	}
 
-	e.logger.Duration(
+	e.logger.Emit(
 		logging.Events.Mirror.UpdateCompleted,
-		repoName,
-		time.Since(start),
+		logging.WithRepo(repoName),
+		logging.WithDuration(time.Since(start)),
 	)
 
 	return nil
@@ -177,14 +169,9 @@ func (e *Engine) syncMirror(ctx context.Context, url string, target string) erro
 		if err := e.cleanupQuarantine(target); err != nil {
 
 			e.logger.Emit(
-				logging.Entry{
-					Level: logging.Warn,
-					Event: logging.Events.Mirror.QuarantineCleanupFailed,
-					Repo:  repoName,
-					Details: map[string]any{
-						"error": err.Error(),
-					},
-				},
+				logging.Events.Mirror.QuarantineCleanupFailed,
+				logging.WithRepo(repoName),
+				logging.WithError(err),
 			)
 		}
 
@@ -201,14 +188,9 @@ func (e *Engine) syncMirror(ctx context.Context, url string, target string) erro
 			repoName := filepath.Base(target)
 
 			e.logger.Emit(
-				logging.Entry{
-					Level: logging.Critical,
-					Event: logging.Events.Mirror.CorruptionDetected,
-					Repo:  repoName,
-					Details: map[string]any{
-						"action": "quarantine",
-					},
-				},
+				logging.Events.Mirror.CorruptionDetected,
+				logging.WithRepo(repoName),
+				logging.WithCause(logging.CauseCorruption),
 			)
 
 			// Quarantine the corrupt mirror.
@@ -221,29 +203,17 @@ func (e *Engine) syncMirror(ctx context.Context, url string, target string) erro
 			if rerr := e.recoverCorruptMirror(ctx, url, target, quarantinePath); rerr != nil {
 
 				e.logger.Emit(
-					logging.Entry{
-						Level: logging.Critical,
-						Event: logging.Events.Mirror.RecoveryFailed,
-						Repo:  repoName,
-						Details: map[string]any{
-							"error": rerr.Error(),
-						},
-					},
+					logging.Events.Mirror.RecoveryFailed,
+					logging.WithRepo(repoName),
+					logging.WithError(rerr),
 				)
 
 				return rerr
 			}
 
-			e.logger.Emit(
-				logging.Entry{
-					Level: logging.Info,
-					Event: logging.Events.Mirror.RecoverySucceeded,
-					Repo:  repoName,
-				},
-			)
+			e.logger.Emit(logging.Events.Mirror.RecoverySucceeded, logging.WithRepo(repoName))
 
 			return nil
-
 		}
 
 		return err
@@ -293,10 +263,10 @@ func (e *Engine) recoverCorruptMirror(
 
 	// Remove the quarantined mirror after successful replacement.
 	if err := os.RemoveAll(quarantine); err != nil {
-		e.logger.Warn(
+		e.logger.Emit(
 			logging.Events.Mirror.QuarantineCleanupFailed,
-			filepath.Base(target),
-			err.Error(),
+			logging.WithRepo(filepath.Base(target)),
+			logging.WithError(err),
 		)
 	}
 

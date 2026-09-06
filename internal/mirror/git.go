@@ -47,17 +47,12 @@ func (e *Engine) runGit(ctx context.Context, repo string, env []string, args ...
 		}
 
 		e.logger.Emit(
-			logging.Entry{
-				Level: logging.Warn,
-				Event: logging.Events.Mirror.Retry,
-
-				Repo: repo,
-
-				Details: map[string]any{
-					"attempt":      attempt,
-					"max_attempts": retryAttempts,
-				},
-			},
+			logging.Events.Mirror.Retry,
+			logging.WithRepo(repo),
+			logging.WithDetails(map[string]any{
+				"attempt":      attempt,
+				"max_attempts": retryAttempts,
+			}),
 		)
 
 		// Linear backoff: attempt 1 -> 5s, attempt 2 -> 10s.

@@ -52,17 +52,13 @@ func (c *Client) discoverGists(ctx context.Context) (DiscoverResult, error) {
 		}
 
 		c.logger.Emit(
-			logging.Entry{
-				Level: logging.Info,
-				Event: logging.Events.GitHub.PageFetched,
-
-				Details: map[string]any{
-					"resource":     "gists",
-					"page":         page,
-					"items":        len(gists),
-					"total_so_far": len(all),
-				},
-			},
+			logging.Events.GitHub.PageFetched,
+			logging.WithDetails(map[string]any{
+				"resource":     "gists",
+				"page":         page,
+				"items":        len(gists),
+				"total_so_far": len(all),
+			}),
 		)
 
 		// No more pages

@@ -111,10 +111,9 @@ func (e *Engine) dispatchGistJobs(jobs chan<- string) error {
 		// If inventory file doesn't exist, return early
 		if os.IsNotExist(err) {
 
-			e.logger.Warn(
+			e.logger.Emit(
 				logging.Events.Inventory.Missing,
-				e.layout.GistInventoryFile,
-				"gist inventory file not found",
+				logging.WithDetails(map[string]any{"inventory_file": e.layout.GistInventoryFile}),
 			)
 
 			fmt.Println(
@@ -126,10 +125,10 @@ func (e *Engine) dispatchGistJobs(jobs chan<- string) error {
 
 		// If there's a different error reading the inventory, log it and return
 		// Such as: permission denied, file corrupted, etc.
-		e.logger.Error(
+		e.logger.Emit(
 			logging.Events.Inventory.ReadFailed,
-			e.layout.GistInventoryFile,
-			err,
+			logging.WithError(err),
+			logging.WithDetails(map[string]any{"inventory_file": e.layout.GistInventoryFile}),
 		)
 
 		return fmt.Errorf(
@@ -141,10 +140,9 @@ func (e *Engine) dispatchGistJobs(jobs chan<- string) error {
 
 	if len(gists) == 0 {
 
-		e.logger.Warn(
+		e.logger.Emit(
 			logging.Events.Inventory.Empty,
-			e.layout.GistInventoryFile,
-			"gist inventory file is empty",
+			logging.WithDetails(map[string]any{"inventory_file": e.layout.GistInventoryFile}),
 		)
 
 		fmt.Println(

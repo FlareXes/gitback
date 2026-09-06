@@ -22,19 +22,11 @@ func ApplyRetention(cfg *config.Config, logger *logging.Logger) error {
 	snapshotRetentionCount := cfg.Snapshot.Retention
 
 	if snapshotRetentionCount <= 0 {
-
-		logger.Info(
-			logging.Events.Snapshot.RetentionDisabled,
-			"",
-		)
-
+		logger.Emit(logging.Events.Snapshot.RetentionDisabled)
 		return nil
 	}
 
-	logger.Info(
-		logging.Events.Snapshot.RetentionStarted,
-		"",
-	)
+	logger.Emit(logging.Events.Snapshot.RetentionStarted)
 
 	entries, err := os.ReadDir(snapshotDir)
 
@@ -94,10 +86,9 @@ func ApplyRetention(cfg *config.Config, logger *logging.Logger) error {
 				snapshot,
 			)
 
-			logger.Error(
+			logger.Emit(
 				logging.Events.Snapshot.RetentionFailed,
-				"",
-				err,
+				logging.WithError(err),
 			)
 
 			continue
@@ -134,10 +125,9 @@ func ApplyRetention(cfg *config.Config, logger *logging.Logger) error {
 				checksum,
 			)
 
-			logger.Error(
+			logger.Emit(
 				logging.Events.Snapshot.RetentionFailed,
-				"",
-				err,
+				logging.WithError(err),
 			)
 
 			continue
@@ -150,22 +140,14 @@ func ApplyRetention(cfg *config.Config, logger *logging.Logger) error {
 	}
 
 	logger.Emit(
-		logging.Entry{
-			Level: logging.Info,
-			Event: logging.Events.Snapshot.RetentionCompleted,
-
-			Details: map[string]any{
-				"retention": snapshotRetentionCount,
-
-				"deleted_snapshots": deletedSnapshots,
-
-				"deleted_checksums": deletedChecksums,
-
-				"missing_checksums": missingChecksums,
-
-				"failed_deletions": failedDeletions,
-			},
-		},
+		logging.Events.Snapshot.RetentionCompleted,
+		logging.WithDetails(map[string]any{
+			"retention":         snapshotRetentionCount,
+			"deleted_snapshots": deletedSnapshots,
+			"deleted_checksums": deletedChecksums,
+			"missing_checksums": missingChecksums,
+			"failed_deletions":  failedDeletions,
+		}),
 	)
 
 	return nil

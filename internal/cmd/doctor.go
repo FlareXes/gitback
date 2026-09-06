@@ -53,14 +53,10 @@ func logDoctorReport(logDir string, minKeep int, retentionDays int, report *doct
 	defer logger.Close()
 
 	logger.Emit(
-		logging.Entry{
-			Level: logging.Info,
-			Event: logging.Events.Doctor.ReportGenerated,
-
-			Details: map[string]any{
-				"report": report,
-			},
-		},
+		logging.Events.Doctor.ReportGenerated,
+		logging.WithDetails(map[string]any{
+			"report": report,
+		}),
 	)
 
 	return nil

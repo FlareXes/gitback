@@ -65,14 +65,19 @@ func withLock(logger *logging.Logger, lockFile string, fn func() error) error {
 
 	unlock, err := locker.Acquire()
 	if err != nil {
-		logger.Error(logging.Events.Lock.Busy, "", err)
+		// logger.Error(logging.Events.Lock.Busy, "", err)
+		logger.Emit(
+			logging.Events.Lock.Busy,
+			logging.WithError(err),
+			logging.WithCause(logging.CauseLockHeld),
+		)
 		return err
 	}
 
-	logger.Info(logging.Events.Lock.Acquired, "")
+	logger.Emit(logging.Events.Lock.Acquired)
 	defer func() {
 		unlock()
-		logger.Info(logging.Events.Lock.Released, "")
+		logger.Emit(logging.Events.Lock.Released)
 	}()
 
 	return fn()
@@ -98,7 +103,7 @@ func executeRun(ctx context.Context) error {
 
 func executeDiscover(ctx context.Context, rt *Runtime) error {
 	logger := rt.Logger
-	logger.Info(logging.Events.GitHub.DiscoveryStarted, "")
+	logger.Emit(logging.Events.GitHub.DiscoveryStarted)
 
 	client, err := discovery.New(rt.Config, rt.Layout, logger)
 	if err != nil {
@@ -106,7 +111,7 @@ func executeDiscover(ctx context.Context, rt *Runtime) error {
 	}
 
 	if err := client.Discover(ctx); err != nil {
-		logger.Error(logging.Events.GitHub.DiscoveryFailed, "", err)
+		logger.Emit(logging.Events.GitHub.DiscoveryFailed, logging.WithError(err))
 		return fmt.Errorf("repository discovery failed: %w", err)
 	}
 
@@ -115,28 +120,28 @@ func executeDiscover(ctx context.Context, rt *Runtime) error {
 
 func executeSync(ctx context.Context, rt *Runtime) error {
 	logger := rt.Logger
-	logger.Info(logging.Events.Sync.Started, "")
+	logger.Emit(logging.Events.Sync.Started)
 
 	engine := mirror.New(rt.Config, rt.Layout, logger)
 	if err := engine.Sync(ctx); err != nil {
-		logger.Error(logging.Events.Sync.Failed, "", err)
+		logger.Emit(logging.Events.Sync.Failed, logging.WithError(err))
 		return err
 	}
 
-	logger.Info(logging.Events.Sync.Completed, "")
+	logger.Emit(logging.Events.Sync.Completed)
 	return nil
 }
 
 func executeSnapshot(ctx context.Context, rt *Runtime, force bool) error {
 	logger := rt.Logger
-	logger.Info(logging.Events.Snapshot.Started, "")
+	logger.Emit(logging.Events.Snapshot.Started)
 
 	engine := snapshot.New(rt.Config, rt.Layout, logger)
 	if err := engine.Create(ctx, force); err != nil {
-		logger.Error(logging.Events.Snapshot.Failed, "", err)
+		logger.Emit(logging.Events.Snapshot.Failed, logging.WithError(err))
 		return err
 	}
 
-	logger.Info(logging.Events.Snapshot.Completed, "")
+	logger.Emit(logging.Events.Snapshot.Completed)
 	return nil
 }

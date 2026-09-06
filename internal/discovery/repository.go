@@ -52,17 +52,13 @@ func (c *Client) discoverRepositories(ctx context.Context) (DiscoverResult, erro
 		}
 
 		c.logger.Emit(
-			logging.Entry{
-				Level: logging.Info,
-				Event: logging.Events.GitHub.PageFetched,
-
-				Details: map[string]any{
-					"resource":     "repositories",
-					"page":         page,
-					"items":        len(repos),
-					"total_so_far": len(all),
-				},
-			},
+			logging.Events.GitHub.PageFetched,
+			logging.WithDetails(map[string]any{
+				"resource":     "repositories",
+				"page":         page,
+				"items":        len(repos),
+				"total_so_far": len(all),
+			}),
 		)
 
 		if resp.NextPage == 0 {
