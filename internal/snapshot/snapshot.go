@@ -53,7 +53,10 @@ func (e *Engine) Create(ctx context.Context, force bool) error {
 			return err
 		}
 
-		e.logger.Emit(logging.Events.Snapshot.VerificationFailed)
+		e.logger.Emit(
+			logging.Events.Snapshot.VerificationFailed,
+			logging.WithRemediation("--force enabled; continuing despite verification failure"),
+		)
 	}
 
 	timestamp := time.Now().
@@ -67,21 +70,29 @@ func (e *Engine) Create(ctx context.Context, force bool) error {
 	// check if tarFile already exists to avoid collision
 	if _, err := os.Stat(tarFile); err == nil {
 
-		err_msg := fmt.Errorf("temporary archive already exists: %s", tarFile)
+		errMsg := fmt.Errorf("temporary archive already exists: %s", tarFile)
 
-		e.logger.Emit(logging.Events.Snapshot.CollisionDetected, logging.WithError(err_msg))
+		e.logger.Emit(
+			logging.Events.Snapshot.CollisionDetected,
+			logging.WithError(errMsg),
+			logging.WithCause(logging.CauseAlreadyExists),
+		)
 
-		return err_msg
+		return errMsg
 	}
 
 	// check if archiveFile already exists to avoid collision
 	if _, err := os.Stat(archiveFile); err == nil {
 
-		err_msg := fmt.Errorf("snapshot already exists: %s", archiveFile)
+		errMsg := fmt.Errorf("snapshot already exists: %s", archiveFile)
 
-		e.logger.Emit(logging.Events.Snapshot.CollisionDetected, logging.WithError(err_msg))
+		e.logger.Emit(
+			logging.Events.Snapshot.CollisionDetected,
+			logging.WithError(errMsg),
+			logging.WithCause(logging.CauseAlreadyExists),
+		)
 
-		return err_msg
+		return errMsg
 	}
 
 	// Create tar archive.
@@ -137,7 +148,6 @@ func (e *Engine) Create(ctx context.Context, force bool) error {
 	// Apply retention policy.
 	fmt.Println("[5/5] Applying retention policy")
 	if err := ApplyRetention(e.cfg, e.logger); err != nil {
-
 		e.logger.Emit(logging.Events.Snapshot.RetentionFailed, logging.WithError(err))
 	}
 

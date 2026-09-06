@@ -65,7 +65,6 @@ func withLock(logger *logging.Logger, lockFile string, fn func() error) error {
 
 	unlock, err := locker.Acquire()
 	if err != nil {
-		// logger.Error(logging.Events.Lock.Busy, "", err)
 		logger.Emit(
 			logging.Events.Lock.Busy,
 			logging.WithError(err),

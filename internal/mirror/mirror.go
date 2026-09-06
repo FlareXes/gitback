@@ -61,7 +61,7 @@ func (e *Engine) cloneMirror(ctx context.Context, repo string, target string) er
 
 	askPass, err := e.createAskPassScript()
 	if err != nil {
-		return err
+		return fmt.Errorf("create askpass script in %s: %w", e.layout.TempDir, err)
 	}
 
 	defer os.Remove(askPass)
@@ -116,7 +116,7 @@ func (e *Engine) updateMirror(ctx context.Context, target string) error {
 
 	askPass, err := e.createAskPassScript()
 	if err != nil {
-		return err
+		return fmt.Errorf("create askpass script in %s: %w", e.layout.TempDir, err)
 	}
 
 	defer os.Remove(askPass)

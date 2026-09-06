@@ -40,7 +40,7 @@ func dailyLogFileName(t time.Time) string {
 }
 
 // CurrentLogFilePath returns the path New would open right now, given
-// logDir. Used by config validation to check writability without opening a second
+// logDir. Used by doctor to check writability without opening a second
 // file handle onto today's log.
 func CurrentLogFilePath(logDir string) string {
 	return filepath.Join(logDir, dailyLogFileName(time.Now()))
@@ -77,11 +77,6 @@ func New(logDir string, minKeep int, retentionDays int) (*Logger, error) {
 		file:    file,
 	}
 
-	logger.Emit(Events.LogRetention.PruneStarted, WithDetails(map[string]any{
-		"minKeep":       minKeep,
-		"retentionDays": retentionDays,
-	}))
-
 	// Best-effort: pruning must never stop gitback from running or
 	// from writing today's log, so failures are logged, not returned.
 	deleted, unrecognized, pruneErr := pruneOldLogs(logDir, minKeep, retentionDays)
@@ -95,15 +90,19 @@ func New(logDir string, minKeep int, retentionDays int) (*Logger, error) {
 	// stray or corrupted filename doesn't just quietly accumulate.
 	if len(unrecognized) > 0 {
 		logger.Emit(Events.LogRetention.UnrecognizedFile, WithDetails(map[string]any{
-			"count": len(unrecognized),
-			"files": unrecognized,
+			"minKeep":       minKeep,
+			"retentionDays": retentionDays,
+			"count":         len(unrecognized),
+			"files":         unrecognized,
 		}))
 	}
 
 	if len(deleted) > 0 {
 		logger.Emit(Events.LogRetention.Pruned, WithDetails(map[string]any{
-			"count": len(deleted),
-			"files": deleted,
+			"minKeep":       minKeep,
+			"retentionDays": retentionDays,
+			"count":         len(deleted),
+			"files":         deleted,
 		}))
 	}
 

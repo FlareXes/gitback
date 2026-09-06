@@ -87,7 +87,7 @@ func Default(layout runtime.Layout) Config {
 		},
 		Logging: LoggingConfig{
 			RetentionDays: 30,
-			MinKeep:       30,
+			MinKeep:       10,
 		},
 	}
 }

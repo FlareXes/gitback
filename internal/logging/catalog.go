@@ -118,7 +118,6 @@ type DoctorEvents struct {
 
 type LogRetentionEvents struct {
 	Pruned           EventDef
-	PruneStarted     EventDef
 	PruneFailed      EventDef
 	UnrecognizedFile EventDef
 }
@@ -535,12 +534,6 @@ var Events = EventCatalog{
 			Code:      "pruned",
 			Level:     Info,
 			Message:   "Old log files pruned",
-		},
-		PruneStarted: EventDef{
-			Component: ComponentLogRetention,
-			Code:      "prune_start",
-			Level:     Info,
-			Message:   "Starting log retention cleanup",
 		},
 		PruneFailed: EventDef{
 			Component:   ComponentLogRetention,
