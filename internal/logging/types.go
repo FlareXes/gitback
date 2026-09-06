@@ -104,6 +104,7 @@ type Entry struct {
 	Level         Level  `json:"level"`
 	RunID         string `json:"run_id"`
 	Host          string `json:"host"`
+	User          string `json:"user"`
 	Component     string `json:"component"`
 	Event         string `json:"event"`
 	Message       string `json:"message"`

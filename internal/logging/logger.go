@@ -8,6 +8,7 @@ import (
 	"encoding/json"
 	"fmt"
 	"os"
+	"os/user"
 	"path/filepath"
 	"regexp"
 	"sort"
@@ -19,6 +20,7 @@ import (
 type Logger struct {
 	runID string
 	host  string
+	user  string
 
 	encoder *json.Encoder
 	file    *os.File
@@ -73,6 +75,7 @@ func New(logDir string, minKeep int, retentionDays int) (*Logger, error) {
 	logger := &Logger{
 		runID:   generateRunID(),
 		host:    hostname(),
+		user:    currentUser(),
 		encoder: json.NewEncoder(file),
 		file:    file,
 	}
@@ -109,15 +112,22 @@ func New(logDir string, minKeep int, retentionDays int) (*Logger, error) {
 	return logger, nil
 }
 
-// hostname resolves the machine's hostname once, for correlating log
-// entries across a fleet of machines in a central SIEM. Falls back to
-// "unknown" rather than failing Logger creation over this.
+// hostname resolves the machine's hostname.
 func hostname() string {
 	name, err := os.Hostname()
 	if err != nil || name == "" {
 		return "unknown"
 	}
 	return name
+}
+
+// currentUser resolves the OS username the current process is running.
+func currentUser() string {
+	u, err := user.Current()
+	if err != nil || u.Username == "" {
+		return "unknown"
+	}
+	return u.Username
 }
 
 // pruneOldLogs removes gitback's own log files older than retentionDays
@@ -288,6 +298,7 @@ func (l *Logger) Emit(def EventDef, opts ...Option) {
 		Level:         def.Level,
 		RunID:         l.runID,
 		Host:          l.host,
+		User:          l.user,
 		Component:     def.Component,
 		Event:         def.Component + "." + def.Code,
 		Message:       def.Message,
