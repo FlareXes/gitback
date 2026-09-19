@@ -1,6 +1,7 @@
 package health
 
 import (
+	"errors"
 	"fmt"
 	"os"
 	"path/filepath"
@@ -50,7 +51,7 @@ func populateAssets(cfg *config.Config, layout runtime.Layout, report *HealthRep
 	data, err := state.LoadMirrors(layout.MirrorsStateFile)
 	if err != nil {
 
-		if os.IsNotExist(err) {
+		if errors.Is(err, os.ErrNotExist) {
 			// Expected on a fresh install — nudge the user to sync.
 			report.Warnings = append(report.Warnings, "mirror state unavailable")
 			report.Recommendations = append(report.Recommendations, "run gitback sync")

@@ -5,6 +5,7 @@ package snapshot
 import (
 	"context"
 	"crypto/sha256"
+	"errors"
 	"fmt"
 	"io"
 	"os"
@@ -192,11 +193,8 @@ func (e *Engine) verifyMirrors() error {
 
 	if err != nil {
 
-		if os.IsNotExist(err) {
-
-			return fmt.Errorf(
-				"mirror state file not found: run `gitback sync` first",
-			)
+		if errors.Is(err, os.ErrNotExist) {
+			return fmt.Errorf("mirror state file not found: run `gitback sync` first")
 		}
 
 		return err

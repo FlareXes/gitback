@@ -53,25 +53,15 @@ func SaveMirrors(
 func LoadMirrors(path string) (*MirrorState, error) {
 
 	file, err := os.Open(path)
-
 	if err != nil {
-		return nil, fmt.Errorf(
-			"open mirror state %s: %w",
-			path,
-			err,
-		)
+		return nil, fmt.Errorf("open mirror state %s: %w", path, err)
 	}
-
 	defer file.Close()
 
 	var data MirrorState
 
 	if err := json.NewDecoder(file).Decode(&data); err != nil {
-		return nil, fmt.Errorf(
-			"load mirror state %s: %w",
-			path,
-			err,
-		)
+		return nil, fmt.Errorf("load mirror state %s: %w", path, err)
 	}
 
 	return &data, nil
