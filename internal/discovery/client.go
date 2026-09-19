@@ -19,7 +19,7 @@ type Client struct {
 }
 
 func New(cfg *config.Config, layout runtime.Layout, logger *logging.Logger) (*Client, error) {
-	token, err := config.ReadToken(layout)
+	token, err := config.ReadToken(layout, logger)
 	if err != nil {
 		return nil, fmt.Errorf("read github token: %w", err)
 	}

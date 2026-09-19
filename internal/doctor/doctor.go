@@ -9,6 +9,7 @@ import (
 	"os"
 	"os/exec"
 	"runtime"
+	"strings"
 
 	"github.com/flarexes/gitback/internal/config"
 	"github.com/flarexes/gitback/internal/logging"
@@ -21,7 +22,7 @@ import (
 // or invalid config is reported as a failed check, not a hard error, so
 // the rest of the checks still run and the user gets a full picture of
 // what's wrong in one pass.
-func Generate(layout rt.Layout) (*Report, error) {
+func Generate(layout rt.Layout, logger *logging.Logger) (*Report, error) {
 
 	report := &Report{}
 
@@ -86,10 +87,8 @@ func Generate(layout rt.Layout) (*Report, error) {
 	// ------------------------------------------------------------------
 
 	report.AddCheck(
-		checkFile(
-			"github.token file",
+		checkTokenAvailable(
 			layout.TokenFile,
-			`Run "gitback init"`,
 		),
 	)
 
@@ -133,7 +132,7 @@ func Generate(layout rt.Layout) (*Report, error) {
 	// config, so this still runs even if config failed to load.
 	// ------------------------------------------------------------------
 
-	token, _ := config.ReadToken(layout)
+	token, _ := config.ReadToken(layout, logger)
 
 	report.AddCheck(
 		checkGitHub(token),
@@ -215,6 +214,25 @@ func checkFile(name string, path string, recommendation string) Check {
 	}
 
 	return check
+}
+
+// checkTokenAvailable reports whether a GitHub token is available from
+// either GITBACK_TOKEN or the token file.
+func checkTokenAvailable(tokenFile string) Check {
+
+	if strings.TrimSpace(os.Getenv("GITBACK_TOKEN")) != "" {
+		return Check{
+			Name:    "github token",
+			Success: true,
+			Message: "using GITBACK_TOKEN environment variable",
+		}
+	}
+
+	return checkFile(
+		"github token",
+		tokenFile,
+		`Run "gitback init", or set GITBACK_TOKEN`,
+	)
 }
 
 func checkWritableFile(name string, path string) Check {

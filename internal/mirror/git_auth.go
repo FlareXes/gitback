@@ -49,7 +49,7 @@ esac
 // environment before we append our own value.
 func (e *Engine) gitEnv(askPass string) []string {
 
-	token, _ := config.ReadToken(e.layout)
+	token, _ := config.ReadToken(e.layout, e.logger)
 
 	env := os.Environ()
 	env = filterEnv(env, "GITBACK_TOKEN", "GIT_ASKPASS", "GIT_TERMINAL_PROMPT")

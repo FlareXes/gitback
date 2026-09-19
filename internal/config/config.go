@@ -8,6 +8,7 @@ import (
 	"path/filepath"
 	"strings"
 
+	"github.com/flarexes/gitback/internal/logging"
 	"github.com/flarexes/gitback/internal/runtime"
 	"github.com/spf13/viper"
 )
@@ -172,25 +173,55 @@ func ReadConfig(layout runtime.Layout, cfg *Config) error {
 	return v.Unmarshal(cfg)
 }
 
-// ReadToken reads the GitHub token from env or the layout's token file.
-func ReadToken(layout runtime.Layout) (string, error) {
+// ReadToken reads the GitHub token from GITBACK_TOKEN or the layout's
+// token file, and logs which source was used.
+//
+// GITBACK_TOKEN always takes precedence over the token file.
+//
+// logger may be nil (some callers, like doctor, may not have a
+// working logger yet) — Emit is nil-safe, so this never panics.
+func ReadToken(layout runtime.Layout, logger *logging.Logger) (string, error) {
+
+	// Read token from environment variable.
 	if token := strings.TrimSpace(os.Getenv("GITBACK_TOKEN")); token != "" {
+
+		logger.Emit(
+			logging.Events.Config.TokenSourceResolved,
+			logging.WithDetails(map[string]any{"source": "env"}),
+		)
+
 		return token, nil
 	}
 
+	// If no token in environment, read from token file.
 	data, err := os.ReadFile(layout.TokenFile)
+
+	// Formatted error message.
+	errTokenNotConfigured := fmt.Errorf(
+		"github token not configured; either:\n" +
+			"  • set GITBACK_TOKEN\n" +
+			"  • run: gitback init",
+	)
+
 	if err != nil {
-		return "", err
+
+		if os.IsNotExist(err) {
+			return "", errTokenNotConfigured
+		}
+
+		return "", fmt.Errorf("read token file: %w", err)
 	}
 
 	token := strings.TrimSpace(string(data))
+
 	if token == "" {
-		return "", fmt.Errorf(
-			"github token not configured; either:\n" +
-				"  • set GITBACK_TOKEN\n" +
-				"  • run: gitback init",
-		)
+		return "", errTokenNotConfigured
 	}
+
+	logger.Emit(
+		logging.Events.Config.TokenSourceResolved,
+		logging.WithDetails(map[string]any{"source": "file"}),
+	)
 
 	return token, nil
 }

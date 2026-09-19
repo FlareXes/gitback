@@ -23,6 +23,12 @@
 //     new one — don't create "clone_error" next to "clone_failed".
 package logging
 
+// ConfigEvents covers credential/config resolution, not sync or
+// snapshot behavior.
+type ConfigEvents struct {
+	TokenSourceResolved EventDef
+}
+
 type GitHubEvents struct {
 	DiscoveryStarted   EventDef
 	DiscoveryCompleted EventDef
@@ -123,6 +129,7 @@ type LogRetentionEvents struct {
 }
 
 type EventCatalog struct {
+	Config       ConfigEvents
 	GitHub       GitHubEvents
 	Inventory    InventoryEvents
 	Mirror       MirrorEvents
@@ -135,6 +142,15 @@ type EventCatalog struct {
 }
 
 var Events = EventCatalog{
+
+	Config: ConfigEvents{
+		TokenSourceResolved: EventDef{
+			Component: ComponentConfig,
+			Code:      "token_source_resolved",
+			Level:     Info,
+			Message:   "GitHub token resolved for use",
+		},
+	},
 
 	GitHub: GitHubEvents{
 		DiscoveryStarted: EventDef{

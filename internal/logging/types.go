@@ -21,6 +21,7 @@ const (
 // Constants, not free strings — a typo in catalog.go becomes a compile
 // error instead of a silently-wrong value shipped to every consumer.
 const (
+	ComponentConfig       = "config"
 	ComponentGitHub       = "github"
 	ComponentInventory    = "inventory"
 	ComponentMirror       = "mirror"

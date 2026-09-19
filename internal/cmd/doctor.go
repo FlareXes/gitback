@@ -23,12 +23,21 @@ var doctorCmd = &cobra.Command{
 			return err
 		}
 
-		report, err := doctor.Generate(layout)
+		// Best-effort logger: doctor must still produce a full report
+		// even if log writing itself is broken.
+		// minKeep=0, retentionDays=0 disables pruning; doctor is read-only.
+		logger, logErr := logging.New(layout.LogDir, 0, 0)
+		if logErr != nil {
+			fmt.Fprintf(os.Stderr, "[WARN] Could not open log file: %v\n", logErr)
+		}
+		defer logger.Close()
+
+		report, err := doctor.Generate(layout, logger)
 		if err != nil {
 			return err
 		}
 
-		// doctor doesn't prune old logs; minKeep=0, retentionDays=0 disables pruning
+		// doctor doesn't prune old logs; minKeep=0, retentionDays=0 disables pruning.
 		if err := logDoctorReport(layout.LogDir, 0, 0, report); err != nil {
 
 			fmt.Fprintf(

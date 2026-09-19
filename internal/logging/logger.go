@@ -233,7 +233,7 @@ func truncateToDay(t time.Time) time.Time {
 }
 
 func (l *Logger) Close() error {
-	if l.file == nil {
+	if l == nil || l.file == nil {
 		return nil
 	}
 	return l.file.Close()
@@ -288,6 +288,10 @@ func WithDetails(details any) Option {
 // defaults. def is always one of the values declared in catalog.go —
 // there is no way to log an event that isn't declared there.
 func (l *Logger) Emit(def EventDef, opts ...Option) {
+
+	if l == nil {
+		return
+	}
 
 	l.mu.Lock()
 	defer l.mu.Unlock()
