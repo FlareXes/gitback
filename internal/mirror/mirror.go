@@ -15,6 +15,12 @@ import (
 	"github.com/flarexes/gitback/internal/state"
 )
 
+// isCancelled reports whether err is (or wraps) a context cancellation,
+// as opposed to a genuine operation failure.
+func isCancelled(err error) bool {
+	return errors.Is(err, context.Canceled) || errors.Is(err, context.DeadlineExceeded)
+}
+
 func printSyncSummary(label string, assets []state.Asset) {
 
 	var failed []string
@@ -88,7 +94,7 @@ func (e *Engine) cloneMirror(ctx context.Context, repo string, target string) er
 
 	if err != nil {
 
-		if ctx.Err() != nil {
+		if isCancelled(err) {
 			e.logger.Emit(
 				logging.Events.Mirror.CloneInterrupted,
 				logging.WithAsset(repoName),
@@ -145,7 +151,7 @@ func (e *Engine) updateMirror(ctx context.Context, target string) error {
 
 	if err != nil {
 
-		if ctx.Err() != nil {
+		if isCancelled(err) {
 			e.logger.Emit(
 				logging.Events.Mirror.UpdateInterrupted,
 				logging.WithAsset(repoName),
@@ -218,8 +224,26 @@ func (e *Engine) syncMirror(ctx context.Context, url string, target string) erro
 				return qerr
 			}
 
+			if ctx.Err() != nil {
+				e.logger.Emit(
+					logging.Events.Mirror.RecoveryDeferred,
+					logging.WithAsset(repoName),
+					logging.WithCause(logging.CauseCancelled),
+				)
+				return ctx.Err()
+			}
+
 			// Try to recover the corrupt mirror.
 			if rerr := e.recoverCorruptMirror(ctx, url, target, quarantinePath); rerr != nil {
+
+				if isCancelled(rerr) {
+					e.logger.Emit(
+						logging.Events.Mirror.RecoveryInterrupted,
+						logging.WithAsset(repoName),
+						logging.WithCause(logging.CauseCancelled),
+					)
+					return rerr
+				}
 
 				e.logger.Emit(
 					logging.Events.Mirror.RecoveryFailed,

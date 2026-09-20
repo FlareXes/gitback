@@ -4,6 +4,7 @@ package cmd
 
 import (
 	"context"
+	"errors"
 	"fmt"
 
 	"github.com/flarexes/gitback/internal/config"
@@ -21,6 +22,13 @@ type Runtime struct {
 	Config *config.Config
 	Layout runtime.Layout
 	Logger *logging.Logger
+}
+
+// isCancelled reports whether err is (or wraps) a context cancellation.
+// Duplicated from internal/mirror rather than exported from there —
+// three lines, not worth a cross-package dependency for.
+func isCancelled(err error) bool {
+	return errors.Is(err, context.Canceled) || errors.Is(err, context.DeadlineExceeded)
 }
 
 // prepareRuntime resolves the layout, loads config, ensures directories
@@ -110,6 +118,16 @@ func executeDiscover(ctx context.Context, rt *Runtime) error {
 	}
 
 	if err := client.Discover(ctx); err != nil {
+
+		if isCancelled(err) {
+			logger.Emit(
+				logging.Events.GitHub.DiscoveryInterrupted,
+				logging.WithError(err),
+				logging.WithCause(logging.CauseCancelled),
+			)
+			return err
+		}
+
 		logger.Emit(logging.Events.GitHub.DiscoveryFailed, logging.WithError(err))
 		return fmt.Errorf("repository discovery failed: %w", err)
 	}
@@ -125,7 +143,7 @@ func executeSync(ctx context.Context, rt *Runtime) error {
 
 	if err := engine.Sync(ctx); err != nil {
 
-		if ctx.Err() != nil {
+		if isCancelled(err) {
 			logger.Emit(
 				logging.Events.Sync.Interrupted,
 				logging.WithError(err),
@@ -148,6 +166,16 @@ func executeSnapshot(ctx context.Context, rt *Runtime, force bool) error {
 
 	engine := snapshot.New(rt.Config, rt.Layout, logger)
 	if err := engine.Create(ctx, force); err != nil {
+
+		if isCancelled(err) {
+			logger.Emit(
+				logging.Events.Snapshot.Interrupted,
+				logging.WithError(err),
+				logging.WithCause(logging.CauseCancelled),
+			)
+			return err
+		}
+
 		logger.Emit(logging.Events.Snapshot.Failed, logging.WithError(err))
 		return err
 	}

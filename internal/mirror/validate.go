@@ -38,13 +38,13 @@ func (e *Engine) validateMirror(ctx context.Context, target string) error {
 		// to real corruption (non-zero exit). Without this check, an
 		// interrupted but perfectly healthy mirror would be quarantined
 		// for no reason.
-		if ctx.Err() != nil {
+		if isCancelled(err) {
 			e.logger.Emit(
 				logging.Events.Mirror.FsckInterrupted,
 				logging.WithAsset(repoName),
 				logging.WithCause(logging.CauseCancelled),
 			)
-			return ctx.Err()
+			return err
 		}
 
 		fsckErr := fmt.Errorf(

@@ -33,10 +33,13 @@ type GitHubEvents struct {
 	DiscoveryStarted   EventDef
 	DiscoveryCompleted EventDef
 	DiscoveryFailed    EventDef
-	DiscoverySummary   EventDef
-	PageFetched        EventDef
-	InventoryLoaded    EventDef
-	RateLimit          EventDef
+
+	DiscoverySummary EventDef
+	PageFetched      EventDef
+	InventoryLoaded  EventDef
+	RateLimit        EventDef
+
+	DiscoveryInterrupted EventDef
 }
 
 type InventoryEvents struct {
@@ -72,9 +75,11 @@ type MirrorEvents struct {
 
 	StateSaveFailed EventDef
 
-	CloneInterrupted  EventDef
-	UpdateInterrupted EventDef
-	FsckInterrupted   EventDef
+	CloneInterrupted    EventDef
+	UpdateInterrupted   EventDef
+	FsckInterrupted     EventDef
+	RecoveryInterrupted EventDef
+	RecoveryDeferred    EventDef
 }
 
 type SyncEvents struct {
@@ -112,6 +117,8 @@ type SnapshotEvents struct {
 	RetentionFailed    EventDef
 
 	CollisionDetected EventDef
+
+	Interrupted EventDef
 }
 
 type LockEvents struct {
@@ -379,6 +386,20 @@ var Events = EventCatalog{
 			Level:       Warn,
 			Message:     "Mirror integrity check was interrupted before completion",
 			Remediation: "Re-run `gitback sync`; this mirror was not modified.",
+		},
+		RecoveryInterrupted: EventDef{
+			Component:   ComponentMirror,
+			Code:        "recovery_interrupted",
+			Level:       Warn,
+			Message:     "Automatic recovery was interrupted (e.g. ctrl+c) before completion",
+			Remediation: "The mirror remains safely quarantined; re-run `gitback sync` to retry recovery.",
+		},
+		RecoveryDeferred: EventDef{
+			Component:   ComponentMirror,
+			Code:        "recovery_deferred",
+			Level:       Warn,
+			Message:     "Automatic recovery deferred due to interruption (e.g. ctrl+c)",
+			Remediation: "Re-run `gitback sync`; the mirror will be re-cloned fresh.",
 		},
 	},
 
