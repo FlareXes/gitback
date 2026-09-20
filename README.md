@@ -6,6 +6,8 @@ GitBack is a command-line utility that creates and maintains local mirror backup
 
 Unlike traditional backup scripts, GitBack is designed to run continuously as a scheduled job with an emphasis on reliability, operational visibility, and recoverability.
 
+Learn More: [![Ask DeepWiki](https://deepwiki.com/badge.svg)](https://deepwiki.com/FlareXes/gitback)
+
 ## Features
 
 - Backup GitHub repositories
