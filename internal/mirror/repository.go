@@ -92,7 +92,7 @@ func (e *Engine) syncRepositories(ctx context.Context) ([]state.Asset, error) {
 	dispatchErr := make(chan error, 1)
 
 	go func() {
-		dispatchErr <- e.dispatchRepositoryJobs(jobs)
+		dispatchErr <- e.dispatchRepositoryJobs(ctx, jobs)
 	}()
 
 	go func() {
@@ -124,7 +124,7 @@ func (e *Engine) syncRepositories(ctx context.Context) ([]state.Asset, error) {
 // other read error (permissions, corruption) is real and must
 // propagate, or sync would silently process zero repositories and
 // report success.
-func (e *Engine) dispatchRepositoryJobs(jobs chan<- string) error {
+func (e *Engine) dispatchRepositoryJobs(ctx context.Context, jobs chan<- string) error {
 
 	defer close(jobs)
 
@@ -178,8 +178,14 @@ func (e *Engine) dispatchRepositoryJobs(jobs chan<- string) error {
 
 	for _, repo := range repositories {
 
-		jobs <- repo
+		// Stop feeding new jobs once cancellation is requested — else
+		// every remaining repo gets dispatched and fails near-instantly,
+		// flooding stdout and the log instead of stopping promptly.
+		if ctx.Err() != nil {
+			break
+		}
 
+		jobs <- repo
 		fmt.Printf("[REPO] %s\n", e.extractRepoName(repo))
 	}
 

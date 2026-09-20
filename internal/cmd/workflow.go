@@ -122,7 +122,18 @@ func executeSync(ctx context.Context, rt *Runtime) error {
 	logger.Emit(logging.Events.Sync.Started)
 
 	engine := mirror.New(rt.Config, rt.Layout, logger)
+
 	if err := engine.Sync(ctx); err != nil {
+
+		if ctx.Err() != nil {
+			logger.Emit(
+				logging.Events.Sync.Interrupted,
+				logging.WithError(err),
+				logging.WithCause(logging.CauseCancelled),
+			)
+			return err
+		}
+
 		logger.Emit(logging.Events.Sync.Failed, logging.WithError(err))
 		return err
 	}

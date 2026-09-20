@@ -87,6 +87,16 @@ func (e *Engine) cloneMirror(ctx context.Context, repo string, target string) er
 	)
 
 	if err != nil {
+
+		if ctx.Err() != nil {
+			e.logger.Emit(
+				logging.Events.Mirror.CloneInterrupted,
+				logging.WithAsset(repoName),
+				logging.WithCause(logging.CauseCancelled),
+			)
+			return err
+		}
+
 		e.logger.Emit(
 			logging.Events.Mirror.CloneFailed,
 			logging.WithAsset(repoName),
@@ -134,6 +144,15 @@ func (e *Engine) updateMirror(ctx context.Context, target string) error {
 	)
 
 	if err != nil {
+
+		if ctx.Err() != nil {
+			e.logger.Emit(
+				logging.Events.Mirror.UpdateInterrupted,
+				logging.WithAsset(repoName),
+				logging.WithCause(logging.CauseCancelled),
+			)
+			return err
+		}
 
 		e.logger.Emit(
 			logging.Events.Mirror.UpdateFailed,

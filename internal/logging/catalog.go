@@ -71,6 +71,10 @@ type MirrorEvents struct {
 	RecoveryFailed     EventDef
 
 	StateSaveFailed EventDef
+
+	CloneInterrupted  EventDef
+	UpdateInterrupted EventDef
+	FsckInterrupted   EventDef
 }
 
 type SyncEvents struct {
@@ -78,6 +82,8 @@ type SyncEvents struct {
 	Completed EventDef
 	Failed    EventDef
 	Summary   EventDef
+
+	Interrupted EventDef
 }
 
 type SnapshotEvents struct {
@@ -352,6 +358,28 @@ var Events = EventCatalog{
 			Message:     "Failed to save mirror sync state",
 			Remediation: "Check disk space and permissions on the state directory; this run's results may be missing from `gitback health`.",
 		},
+
+		CloneInterrupted: EventDef{
+			Component:   ComponentMirror,
+			Code:        "clone_interrupted",
+			Level:       Warn,
+			Message:     "Mirror clone was interrupted before completion",
+			Remediation: "Re-run `gitback sync` to retry this repository.",
+		},
+		UpdateInterrupted: EventDef{
+			Component:   ComponentMirror,
+			Code:        "update_interrupted",
+			Level:       Warn,
+			Message:     "Mirror update was interrupted before completion",
+			Remediation: "Re-run `gitback sync` to retry this repository.",
+		},
+		FsckInterrupted: EventDef{
+			Component:   ComponentMirror,
+			Code:        "fsck_interrupted",
+			Level:       Warn,
+			Message:     "Mirror integrity check was interrupted before completion",
+			Remediation: "Re-run `gitback sync`; this mirror was not modified.",
+		},
 	},
 
 	Sync: SyncEvents{
@@ -379,6 +407,14 @@ var Events = EventCatalog{
 			Code:      "summary",
 			Level:     Info,
 			Message:   "Sync run summary",
+		},
+
+		Interrupted: EventDef{
+			Component:   ComponentSync,
+			Code:        "interrupted",
+			Level:       Warn,
+			Message:     "Sync was interrupted before completion",
+			Remediation: "Rerun `gitback sync` to finish backing up any remaining repositories.",
 		},
 	},
 

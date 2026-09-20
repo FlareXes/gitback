@@ -42,10 +42,10 @@ func (e *Engine) Sync(ctx context.Context) error {
 	// Sync Gists
 	var gists []state.Asset
 
-	if e.cfg.GitHub.BackupGists {
-
+	// Skip the gist phase entirely if repos were already interrupted —
+	// starting a new phase after cancellation just repeats the burst.
+	if e.cfg.GitHub.BackupGists && ctx.Err() == nil {
 		gists, err = e.syncGists(ctx)
-
 		if err != nil {
 			return err
 		}
@@ -73,8 +73,13 @@ func (e *Engine) Sync(ctx context.Context) error {
 		return err
 	}
 
-	// Log sync summary
 	e.logSyncSummary(syncStartedAt, repositories, gists)
+
+	// Surface cancellation after state is persisted, so the caller can
+	// log this as an interruption, not a failure, without losing progress.
+	if ctx.Err() != nil {
+		return ctx.Err()
+	}
 
 	return nil
 }

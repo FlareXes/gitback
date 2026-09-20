@@ -34,6 +34,19 @@ func (e *Engine) validateMirror(ctx context.Context, target string) error {
 	output, err := fsck.CombinedOutput()
 	if err != nil {
 
+		// A canceled context kills fsck mid-check, which looks identical
+		// to real corruption (non-zero exit). Without this check, an
+		// interrupted but perfectly healthy mirror would be quarantined
+		// for no reason.
+		if ctx.Err() != nil {
+			e.logger.Emit(
+				logging.Events.Mirror.FsckInterrupted,
+				logging.WithAsset(repoName),
+				logging.WithCause(logging.CauseCancelled),
+			)
+			return ctx.Err()
+		}
+
 		fsckErr := fmt.Errorf(
 			"%w: %s",
 			ErrMirrorCorrupt,
