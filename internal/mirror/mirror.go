@@ -189,7 +189,7 @@ func (e *Engine) syncMirror(ctx context.Context, url string, target string) erro
 
 		// Remove any stale quarantined copy so the
 		// quarantine directory only contains unresolved mirrors.
-		repoName := filepath.Base(target)
+		repoName := strings.TrimSuffix(filepath.Base(target), ".git")
 
 		if err := e.cleanupQuarantine(target); err != nil {
 
@@ -210,7 +210,7 @@ func (e *Engine) syncMirror(ctx context.Context, url string, target string) erro
 		if errors.Is(err, ErrMirrorCorrupt) {
 
 			// Log the corruption event.
-			repoName := filepath.Base(target)
+			repoName := strings.TrimSuffix(filepath.Base(target), ".git")
 
 			e.logger.Emit(
 				logging.Events.Mirror.CorruptionDetected,
