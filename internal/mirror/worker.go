@@ -61,9 +61,7 @@ func (e *Engine) worker(
 
 	for asset := range jobs {
 
-		if err := syncFn(ctx, asset); err != nil {
-			results <- buildAsset(asset, err)
-		}
+		results <- buildAsset(asset, syncFn(ctx, asset))
 	}
 }
 
