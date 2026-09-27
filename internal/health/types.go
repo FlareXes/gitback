@@ -25,6 +25,13 @@ type AssetHealth struct {
 	Total   int `json:"total"`
 	Healthy int `json:"healthy"`
 	Failed  int `json:"failed"`
+
+	// Interrupted counts assets whose last sync attempt was cancelled
+	// (state.Asset.Cause == logging.CauseCancelled) rather than
+	// genuinely failed. Deliberately excluded from Failed and from
+	// updateStatus's warning trigger — nothing is actually wrong; the
+	// next sync will simply retry them.
+	Interrupted int `json:"interrupted,omitempty"`
 }
 
 type QuarantineHealth struct {

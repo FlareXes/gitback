@@ -11,6 +11,7 @@ import (
 	"time"
 
 	"github.com/flarexes/gitback/internal/config"
+	"github.com/flarexes/gitback/internal/logging"
 	"github.com/flarexes/gitback/internal/runtime"
 	"github.com/flarexes/gitback/internal/state"
 )
@@ -76,9 +77,12 @@ func populateAssets(cfg *config.Config, layout runtime.Layout, report *HealthRep
 
 	for _, repo := range data.Repositories {
 		report.Repositories.Total++
-		if repo.LastSuccess {
+		switch {
+		case repo.LastSuccess:
 			report.Repositories.Healthy++
-		} else {
+		case repo.Cause == logging.CauseCancelled:
+			report.Repositories.Interrupted++
+		default:
 			report.Repositories.Failed++
 		}
 	}
@@ -89,9 +93,12 @@ func populateAssets(cfg *config.Config, layout runtime.Layout, report *HealthRep
 	if cfg.GitHub.BackupGists {
 		for _, gist := range data.Gists {
 			report.Gists.Total++
-			if gist.LastSuccess {
+			switch {
+			case gist.LastSuccess:
 				report.Gists.Healthy++
-			} else {
+			case gist.Cause == logging.CauseCancelled:
+				report.Gists.Interrupted++
+			default:
 				report.Gists.Failed++
 			}
 		}
@@ -288,6 +295,18 @@ func populateRecommendations(cfg *config.Config, layout runtime.Layout, report *
 			fmt.Sprintf(
 				"run `gitback sync` and inspect %s",
 				layout.MirrorsStateFile,
+			),
+		)
+	}
+
+	// Interrupted assets
+	interrupted := report.Repositories.Interrupted + report.Gists.Interrupted
+	if interrupted > 0 {
+		report.Recommendations = append(
+			report.Recommendations,
+			fmt.Sprintf(
+				"%d asset(s) were mid-sync when the last run was interrupted; run `gitback sync` to finish them",
+				interrupted,
 			),
 		)
 	}

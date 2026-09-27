@@ -9,12 +9,18 @@ func PrintReport(report *HealthReport) {
 	fmt.Println("Repositories")
 	fmt.Printf("  Healthy: %d\n", report.Repositories.Healthy)
 	fmt.Printf("  Failed:  %d\n", report.Repositories.Failed)
+	if report.Repositories.Interrupted > 0 {
+		fmt.Printf("  Interrupted: %d\n", report.Repositories.Interrupted)
+	}
 	fmt.Printf("  Total:   %d\n\n", report.Repositories.Total)
 
 	if report.Gists.Total > 0 {
 		fmt.Println("Gists")
 		fmt.Printf("  Healthy: %d\n", report.Gists.Healthy)
 		fmt.Printf("  Failed:  %d\n", report.Gists.Failed)
+		if report.Gists.Interrupted > 0 {
+			fmt.Printf("  Interrupted: %d\n", report.Gists.Interrupted)
+		}
 		fmt.Printf("  Total:   %d\n\n", report.Gists.Total)
 	}
 
