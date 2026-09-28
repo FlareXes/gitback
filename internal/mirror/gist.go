@@ -30,16 +30,7 @@ func (e *Engine) extractGistName(gistURL string) string {
 }
 
 func (e *Engine) gistMirrorPath(gistURL string) string {
-
-	id := strings.TrimSuffix(
-		filepath.Base(gistURL),
-		".git",
-	)
-
-	return filepath.Join(
-		e.gistMirrorRoot(),
-		id+".git",
-	)
+	return filepath.Join(e.cfg.Storage.MirrorRoot, gistRelPath(gistURL))
 }
 
 func (e *Engine) syncGist(ctx context.Context, gistURL string) error {

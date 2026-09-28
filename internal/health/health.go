@@ -12,6 +12,7 @@ import (
 
 	"github.com/flarexes/gitback/internal/config"
 	"github.com/flarexes/gitback/internal/logging"
+	"github.com/flarexes/gitback/internal/mirror"
 	"github.com/flarexes/gitback/internal/runtime"
 	"github.com/flarexes/gitback/internal/state"
 )
@@ -37,6 +38,7 @@ func Generate(cfg *config.Config, layout runtime.Layout) (*HealthReport, error) 
 	// section can't be gathered.
 	populateAssets(cfg, layout, report)
 	populateQuarantine(cfg, report)
+	populateOrphans(cfg, layout, report)
 	populateSnapshots(cfg, report)
 	populateDisk(cfg, report)
 
@@ -127,6 +129,29 @@ func populateQuarantine(cfg *config.Config, report *HealthReport) {
 
 	report.Quarantine.Repositories = repositories
 	report.Quarantine.Gists = gists
+}
+
+// populateOrphans records mirrors that exist on disk but are no longer
+// in the inventory. A failure to check is surfaced as a warning
+// without hiding whatever was found.
+func populateOrphans(cfg *config.Config, layout runtime.Layout, report *HealthReport) {
+
+	orphans, err := mirror.FindOrphans(cfg, layout)
+	if err != nil {
+		report.Warnings = append(
+			report.Warnings,
+			fmt.Sprintf("could not check for orphaned mirrors: %v", err),
+		)
+	}
+
+	report.Orphaned.Mirrors = OrphanList{
+		Repositories: orphans.Repositories,
+		Gists:        orphans.Gists,
+	}
+	report.Orphaned.Quarantine = OrphanList{
+		Repositories: orphans.QuarantinedRepositories,
+		Gists:        orphans.QuarantinedGists,
+	}
 }
 
 // populateSnapshots scans the snapshot output directory and records the
@@ -319,6 +344,30 @@ func populateRecommendations(cfg *config.Config, layout runtime.Layout, report *
 			fmt.Sprintf(
 				"run `gitback sync` for automatic recovery; if mirrors remain quarantined afterwards, inspect them manually at %s",
 				cfg.QuarantineDir(),
+			),
+		)
+	}
+
+	// Orphaned live mirrors: intact, but frozen because discovery no
+	// longer lists them.
+	if n := report.Orphaned.Mirrors.Count(); n > 0 {
+		report.Recommendations = append(
+			report.Recommendations,
+			fmt.Sprintf(
+				"%d mirror(s) are no longer in the inventory and will not be updated (deleted upstream, renamed, or access lost); keep them as a backup, or remove them from %s if unneeded",
+				n, cfg.Storage.MirrorRoot,
+			),
+		)
+	}
+
+	// Orphaned quarantined mirrors: corrupt AND upstream gone, so they
+	// can never be recovered automatically.
+	if n := report.Orphaned.Quarantine.Count(); n > 0 {
+		report.Recommendations = append(
+			report.Recommendations,
+			fmt.Sprintf(
+				"%d quarantined mirror(s) are no longer in the inventory and cannot be recovered automatically; inspect them in %s and remove them if unneeded",
+				n, cfg.QuarantineDir(),
 			),
 		)
 	}

@@ -41,28 +41,11 @@ func (e *Engine) extractRepoName(repoURL string) string {
 	)
 }
 
+// repositoryMirrorPath returns the absolute path of a repository's
+// mirror. The layout itself lives in repositoryRelPath, shared with
+// orphan detection.
 func (e *Engine) repositoryMirrorPath(repoURL string) string {
-
-	repo := strings.TrimSuffix(repoURL, ".git")
-
-	parts := strings.Split(repo, "/")
-
-	if len(parts) < 2 {
-
-		return filepath.Join(
-			e.repoMirrorRoot(),
-			filepath.Base(repoURL),
-		)
-	}
-
-	owner := parts[len(parts)-2]
-	name := parts[len(parts)-1]
-
-	return filepath.Join(
-		e.repoMirrorRoot(),
-		owner,
-		name+".git",
-	)
+	return filepath.Join(e.cfg.Storage.MirrorRoot, repositoryRelPath(repoURL))
 }
 
 func (e *Engine) syncRepository(ctx context.Context, repo string) error {

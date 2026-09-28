@@ -2,6 +2,60 @@ package health
 
 import "fmt"
 
+// maxListedOrphans caps how many names are printed per group in the
+// human report. If a token loses access, thousands of mirrors can be
+// orphaned at once; the full list is always available via --json.
+const maxListedOrphans = 10
+
+// printOrphanNames prints a count and up to maxListedOrphans names,
+// noting how many were omitted.
+func printOrphanNames(label string, names []string) {
+
+	if len(names) == 0 {
+		return
+	}
+
+	fmt.Printf("    %s: %d\n", label, len(names))
+
+	shown := names
+	if len(shown) > maxListedOrphans {
+		shown = names[:maxListedOrphans]
+	}
+
+	for _, name := range shown {
+		fmt.Printf("      - %s\n", name)
+	}
+
+	if omitted := len(names) - len(shown); omitted > 0 {
+		fmt.Printf("      ... and %d more (see `gitback health --json`)\n", omitted)
+	}
+}
+
+// printOrphans prints the "Not in inventory" section, or nothing when
+// there are no orphans.
+func printOrphans(o OrphanHealth) {
+
+	if o.Mirrors.Count() == 0 && o.Quarantine.Count() == 0 {
+		return
+	}
+
+	fmt.Println("Not in inventory")
+	printOrphanGroup("Live mirrors (no longer updated)", o.Mirrors)
+	printOrphanGroup("Quarantined (cannot be recovered automatically)", o.Quarantine)
+	fmt.Println()
+}
+
+func printOrphanGroup(title string, list OrphanList) {
+
+	if list.Count() == 0 {
+		return
+	}
+
+	fmt.Printf("  %s\n", title)
+	printOrphanNames("Repositories", list.Repositories)
+	printOrphanNames("Gists", list.Gists)
+}
+
 func PrintReport(report *HealthReport) {
 
 	fmt.Printf("Status: %s\n\n", report.Status)
@@ -29,6 +83,9 @@ func PrintReport(report *HealthReport) {
 		fmt.Printf("  Repositories: %d\n", report.Quarantine.Repositories)
 		fmt.Printf("  Gists:        %d\n\n", report.Quarantine.Gists)
 	}
+
+	// Print orphans
+	printOrphans(report.Orphaned)
 
 	fmt.Println("Snapshots")
 	fmt.Printf("  Count:  %d\n", report.Snapshots.Count)
