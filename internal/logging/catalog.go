@@ -327,7 +327,7 @@ var Events = EventCatalog{
 			Component: ComponentMirror,
 			Code:      "quarantine_cleanup_completed",
 			Level:     Info,
-			Message:   "Quarantined mirror removed after successful recovery",
+			Message:   "Quarantined copies removed after successful recovery",
 		},
 		QuarantineCleanupFailed: EventDef{
 			Component:   ComponentMirror,

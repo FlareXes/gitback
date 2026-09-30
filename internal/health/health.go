@@ -108,22 +108,16 @@ func populateAssets(cfg *config.Config, layout runtime.Layout, report *HealthRep
 }
 
 // populateQuarantine counts mirrors that remain quarantined after
-// automatic recovery attempts.
+// automatic recovery attempts. Counting is delegated to the mirror
+// package, which owns the quarantine layout (including the timestamp
+// suffix on repeated quarantines), so the two can't disagree.
 func populateQuarantine(cfg *config.Config, report *HealthReport) {
 
-	repositories, err := countQuarantinedRepositories(cfg)
+	repositories, gists, err := mirror.CountQuarantined(cfg)
 	if err != nil {
 		report.Warnings = append(
 			report.Warnings,
-			fmt.Sprintf("could not inspect quarantined repositories: %v", err),
-		)
-	}
-
-	gists, err := countQuarantinedGists(cfg)
-	if err != nil {
-		report.Warnings = append(
-			report.Warnings,
-			fmt.Sprintf("could not inspect quarantined gists: %v", err),
+			fmt.Sprintf("could not inspect quarantine: %v", err),
 		)
 	}
 

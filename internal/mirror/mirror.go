@@ -178,29 +178,15 @@ func (e *Engine) updateMirror(ctx context.Context, target string) error {
 	return nil
 }
 
-func (e *Engine) syncMirror(ctx context.Context, url string, target string) error {
+// refreshMirror brings the live mirror at target up to date: it clones a
+// missing mirror, recovers a corrupt one (quarantine, fresh clone, swap),
+// or updates a healthy one. It does not touch leftover quarantined
+// copies; syncMirror does that once this succeeds.
+func (e *Engine) refreshMirror(ctx context.Context, url string, target string) error {
 
 	// Clone if asset doesn't exist.
 	if _, err := os.Stat(target); os.IsNotExist(err) {
-
-		if err := e.cloneMirror(ctx, url, target); err != nil {
-			return err
-		}
-
-		// Remove any stale quarantined copy so the
-		// quarantine directory only contains unresolved mirrors.
-		repoName := strings.TrimSuffix(filepath.Base(target), ".git")
-
-		if err := e.cleanupQuarantine(target); err != nil {
-
-			e.logger.Emit(
-				logging.Events.Mirror.QuarantineCleanupFailed,
-				logging.WithAsset(repoName),
-				logging.WithError(err),
-			)
-		}
-
-		return nil
+		return e.cloneMirror(ctx, url, target)
 	}
 
 	// Validate the existing mirror before attempting to update it.
@@ -264,6 +250,30 @@ func (e *Engine) syncMirror(ctx context.Context, url string, target string) erro
 
 	// Update existing asset.
 	return e.updateMirror(ctx, target)
+}
+
+// syncMirror brings the mirror at target up to date, then clears any
+// quarantined copies of it.
+//
+// The rule is that quarantine holds only unresolved mirrors, and a
+// mirror is resolved once its live copy is verified healthy.
+func (e *Engine) syncMirror(ctx context.Context, url string, target string) error {
+
+	if err := e.refreshMirror(ctx, url, target); err != nil {
+		return err
+	}
+
+	// Best-effort: failing to tidy quarantine must not turn a mirror
+	// that synced successfully into a failed one.
+	if err := e.cleanupQuarantine(target); err != nil {
+		e.logger.Emit(
+			logging.Events.Mirror.QuarantineCleanupFailed,
+			logging.WithAsset(strings.TrimSuffix(filepath.Base(target), ".git")),
+			logging.WithError(err),
+		)
+	}
+
+	return nil
 }
 
 // recoverCorruptMirror clones a fresh mirror, validates it, and atomically replaces
