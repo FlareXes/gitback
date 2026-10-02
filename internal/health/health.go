@@ -386,6 +386,19 @@ func populateRecommendations(cfg *config.Config, layout runtime.Layout, report *
 			"consider creating a snapshot",
 		)
 	}
+
+	// Dangling gist mirrors
+	if !cfg.GitHub.BackupGists {
+		if count, err := mirror.CountLiveGistMirrors(cfg); err == nil && count > 0 {
+			report.Recommendations = append(
+				report.Recommendations,
+				fmt.Sprintf(
+					"gist backup is disabled, but %d existing gist mirror(s) remain at %s; gitback will not update or remove them.",
+					count, cfg.GistMirrorRoot(),
+				),
+			)
+		}
+	}
 }
 
 // updateStatus derives the overall report.Status from everything gathered

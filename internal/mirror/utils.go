@@ -4,6 +4,8 @@ package mirror
 import (
 	"path/filepath"
 	"strings"
+
+	"github.com/flarexes/gitback/internal/config"
 )
 
 // mirrorDisplayName derives the name used to identify a mirror in log
@@ -28,4 +30,18 @@ import (
 // made deliberately elsewhere).
 func assetName(pathOrURL string) string {
 	return strings.TrimSuffix(filepath.Base(pathOrURL), ".git")
+}
+
+// CountGistMirrors returns how many gist mirrors currently exist on
+// disk, regardless of the inventory. Used by gitback health to report
+// leftover gist mirrors when gist backup has been disabled — unlike
+// FindOrphans, this deliberately does not compare against the
+// inventory, since a disabled category's inventory isn't being kept
+// current at all.
+func CountLiveGistMirrors(cfg *config.Config) (int, error) {
+	found, err := scanGistMirrors(cfg.Storage.MirrorRoot)
+	if err != nil {
+		return 0, err
+	}
+	return len(found), nil
 }
