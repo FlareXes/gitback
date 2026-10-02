@@ -62,10 +62,7 @@ func (e *Engine) cloneMirror(ctx context.Context, repo string, target string) er
 
 	start := time.Now()
 
-	repoName := strings.TrimSuffix(
-		filepath.Base(repo),
-		".git",
-	)
+	repoName := assetName(repo)
 
 	e.logger.Emit(logging.Events.Mirror.CloneStarted, logging.WithAsset(repoName))
 
@@ -161,10 +158,7 @@ func (e *Engine) cloneMirror(ctx context.Context, repo string, target string) er
 func (e *Engine) updateMirror(ctx context.Context, target string) error {
 	start := time.Now()
 
-	repoName := strings.TrimSuffix(
-		filepath.Base(target),
-		".git",
-	)
+	repoName := assetName(target)
 
 	e.logger.Emit(logging.Events.Mirror.UpdateStarted, logging.WithAsset(repoName))
 
@@ -234,7 +228,7 @@ func (e *Engine) refreshMirror(ctx context.Context, url string, target string) e
 		if errors.Is(err, ErrMirrorCorrupt) {
 
 			// Log the corruption event.
-			repoName := strings.TrimSuffix(filepath.Base(target), ".git")
+			repoName := assetName(target)
 
 			e.logger.Emit(
 				logging.Events.Mirror.CorruptionDetected,
@@ -306,7 +300,7 @@ func (e *Engine) syncMirror(ctx context.Context, url string, target string) erro
 	if err := e.cleanupQuarantine(target); err != nil {
 		e.logger.Emit(
 			logging.Events.Mirror.QuarantineCleanupFailed,
-			logging.WithAsset(strings.TrimSuffix(filepath.Base(target), ".git")),
+			logging.WithAsset(assetName(target)),
 			logging.WithError(err),
 		)
 	}

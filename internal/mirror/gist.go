@@ -7,27 +7,11 @@ import (
 	"fmt"
 	"os"
 	"path/filepath"
-	"strings"
 	"sync"
 
 	"github.com/flarexes/gitback/internal/logging"
 	"github.com/flarexes/gitback/internal/state"
 )
-
-func (e *Engine) gistMirrorRoot() string {
-	return filepath.Join(
-		e.cfg.Storage.MirrorRoot,
-		"gists",
-	)
-}
-
-func (e *Engine) extractGistName(gistURL string) string {
-
-	return strings.TrimSuffix(
-		filepath.Base(gistURL),
-		".git",
-	)
-}
 
 func (e *Engine) gistMirrorPath(gistURL string) string {
 	return filepath.Join(e.cfg.Storage.MirrorRoot, gistRelPath(gistURL))
@@ -145,7 +129,7 @@ func (e *Engine) dispatchGistJobs(jobs chan<- string) error {
 
 	for _, gist := range gists {
 
-		fmt.Printf("[GIST] %s\n", e.extractGistName(gist))
+		fmt.Printf("[GIST] %s\n", assetName(gist))
 
 		jobs <- gist
 	}

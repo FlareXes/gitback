@@ -23,11 +23,7 @@ func (e *Engine) repoMirrorRoot() string {
 
 func (e *Engine) extractRepoName(repoURL string) string {
 
-	repo := strings.TrimSuffix(
-		repoURL,
-		".git",
-	)
-
+	repo := assetName(repoURL)
 	parts := strings.Split(repo, "/")
 
 	if len(parts) < 2 {

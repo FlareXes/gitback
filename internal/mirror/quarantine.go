@@ -139,7 +139,7 @@ func (e *Engine) cleanupQuarantine(target string) error {
 	if len(removed) > 0 {
 		e.logger.Emit(
 			logging.Events.Mirror.QuarantineCleanupCompleted,
-			logging.WithAsset(strings.TrimSuffix(base, ".git")),
+			logging.WithAsset(assetName(base)),
 			logging.WithDetails(map[string]any{"removed": removed}),
 		)
 	}

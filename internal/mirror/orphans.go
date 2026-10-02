@@ -69,7 +69,7 @@ func repositoryRelPath(repoURL string) string {
 // root, e.g. "gists/<id>.git".
 func gistRelPath(gistURL string) string {
 
-	id := strings.TrimSuffix(filepath.Base(gistURL), ".git")
+	id := assetName(gistURL)
 
 	return filepath.Join("gists", id+".git")
 }

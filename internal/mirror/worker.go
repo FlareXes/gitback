@@ -61,7 +61,7 @@ func (e *Engine) worker(
 
 	for asset := range jobs {
 
-		results <- buildAsset(asset, syncFn(ctx, asset))
+		results <- buildAsset(assetName(asset), syncFn(ctx, asset))
 	}
 }
 

@@ -5,7 +5,6 @@ import (
 	"errors"
 	"fmt"
 	"os/exec"
-	"path/filepath"
 	"strings"
 
 	"github.com/flarexes/gitback/internal/logging"
@@ -15,10 +14,7 @@ var ErrMirrorCorrupt = errors.New("mirror is corrupt")
 
 func (e *Engine) validateMirror(ctx context.Context, target string) error {
 
-	repoName := strings.TrimSuffix(
-		filepath.Base(target),
-		".git",
-	)
+	repoName := assetName(target)
 
 	e.logger.Emit(logging.Events.Mirror.FsckStarted, logging.WithAsset(repoName))
 
