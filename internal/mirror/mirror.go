@@ -54,6 +54,10 @@ func printSyncSummary(label string, assets []state.Asset) {
 	}
 }
 
+// cloneMirror clones repo into target.
+//
+// The clone is written to a staging path (target + ".tmp") and only
+// renamed into place once it completes successfully.
 func (e *Engine) cloneMirror(ctx context.Context, repo string, target string) error {
 
 	start := time.Now()
@@ -81,6 +85,14 @@ func (e *Engine) cloneMirror(ctx context.Context, repo string, target string) er
 		)
 	}
 
+	staging := target + ".tmp"
+
+	// Remove any stale staging directory (.tmp) left by a previous interrupted
+	// clone attempt at this same path.
+	if err := os.RemoveAll(staging); err != nil {
+		return fmt.Errorf("remove stale staging directory %s: %w", staging, err)
+	}
+
 	output, err := e.runGit(
 		ctx,
 		repoName,
@@ -89,10 +101,17 @@ func (e *Engine) cloneMirror(ctx context.Context, repo string, target string) er
 		"clone",
 		"--mirror",
 		repo,
-		target,
+		staging,
 	)
 
 	if err != nil {
+
+		// Whatever partial state the clone left in staging is not
+		// useful — a git clone that failed partway through cannot be
+		// resumed by retrying against the same directory. Clean it up
+		// so the next attempt starts from nothing rather than
+		// accumulating .tmp directories with every failed attempt.
+		_ = os.RemoveAll(staging)
 
 		if isCancelled(err) {
 			e.logger.Emit(
@@ -109,6 +128,25 @@ func (e *Engine) cloneMirror(ctx context.Context, repo string, target string) er
 			logging.WithError(fmt.Errorf("%s", gitErrorMessage(output, err))),
 		)
 		return err
+	}
+
+	// runGit reporting success is not, by itself, proof staging exists on
+	// disk — verify directly before the rename depends on it. Surfacing a
+	// clear error here, with git's own output attached, is far more useful
+	// for diagnosis than letting a missing staging directory show up later
+	// as an opaque os.Rename "no such file or directory".
+	if _, statErr := os.Stat(staging); statErr != nil {
+		return fmt.Errorf(
+			"git reported success but no mirror was produced at %s (git output: %s): %w",
+			staging,
+			strings.TrimSpace(string(output)),
+			statErr,
+		)
+	}
+
+	// The clone completed fully — activate it.
+	if err := os.Rename(staging, target); err != nil {
+		return fmt.Errorf("activate cloned mirror: %w", err)
 	}
 
 	e.logger.Emit(
@@ -286,32 +324,15 @@ func (e *Engine) recoverCorruptMirror(
 	quarantine string,
 ) error {
 
-	tmp := target + ".tmp"
-
-	// Remove any stale temporary mirror from a previous failed run.
-	if err := os.RemoveAll(tmp); err != nil {
-		return fmt.Errorf("remove temporary mirror: %w", err)
-	}
-
-	// Ensure temporary files are cleaned up if replacement fails.
-	defer os.RemoveAll(tmp)
-
-	// Clone a fresh mirror to the temporary path.
-	if err := e.cloneMirror(ctx, url, tmp); err != nil {
+	// cloneMirror already stages to target+".tmp" and only renames into
+	// place on success, so recovery's "clone fresh, verify, activate"
+	// need is met by cloneMirror + validateMirror directly.
+	if err := e.cloneMirror(ctx, url, target); err != nil {
 		return err
 	}
 
-	// Validate the fresh mirror before replacing the active one.
-	if err := e.validateMirror(ctx, tmp); err != nil {
+	if err := e.validateMirror(ctx, target); err != nil {
 		return err
-	}
-
-	// Atomically replace the active mirror with the fresh one.
-	if err := os.Rename(tmp, target); err != nil {
-		return fmt.Errorf(
-			"activate replacement mirror: %w",
-			err,
-		)
 	}
 
 	// Remove the quarantined mirror after successful replacement.
