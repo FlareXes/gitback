@@ -16,13 +16,18 @@ type Engine struct {
 	cfg    *config.Config
 	layout runtime.Layout
 	logger *logging.Logger
+	token  string
 }
 
 func New(cfg *config.Config, layout runtime.Layout, logger *logging.Logger) *Engine {
+
+	token, _ := config.ReadToken(layout, logger)
+
 	return &Engine{
 		cfg:    cfg,
 		layout: layout,
 		logger: logger,
+		token:  token,
 	}
 }
 
