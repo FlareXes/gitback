@@ -316,13 +316,10 @@ func (l *Logger) Emit(def EventDef, opts ...Option) {
 	_ = l.encoder.Encode(entry)
 }
 
+// generateRunID returns a random 4-byte run identifier, hex-encoded
+// (8 characters). It correlates every log line from one process.
 func generateRunID() string {
-
-	buf := make([]byte, 4)
-
-	if _, err := rand.Read(buf); err != nil {
-		return time.Now().UTC().Format("20060102150405")
-	}
-
-	return hex.EncodeToString(buf)
+	var buf [4]byte
+	_, _ = rand.Read(buf[:])
+	return hex.EncodeToString(buf[:])
 }
