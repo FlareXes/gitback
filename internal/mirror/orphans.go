@@ -36,7 +36,7 @@ type Orphans struct {
 
 // quarantineTimestampSuffix matches the suffix quarantineMirror adds
 // when a path is already quarantined, e.g. "name.git.20260920T163629Z".
-var quarantineTimestampSuffix = regexp.MustCompile(`\.\d{8}T\d{6}Z$`)
+var quarantineTimestampSuffix = regexp.MustCompile(`\.\d{4}-\d{2}-\d{2}T\d{2}-\d{2}-\d{2}Z$`)
 
 // canonicalMirrorName strips a quarantine timestamp suffix so a mirror
 // quarantined more than once maps to one canonical name. It is a no-op

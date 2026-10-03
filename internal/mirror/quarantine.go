@@ -8,19 +8,12 @@ import (
 	"os"
 	"path/filepath"
 	"strings"
-	"time"
 
+	"github.com/flarexes/gitback/internal/clock"
 	"github.com/flarexes/gitback/internal/config"
 	"github.com/flarexes/gitback/internal/filesystem"
 	"github.com/flarexes/gitback/internal/logging"
 )
-
-// quarantineTimeLayout is the timestamp quarantineMirror appends when a
-// mirror's quarantine path is already taken, e.g.
-// "name.git.20260920T163629Z". canonicalMirrorName (orphans.go) must
-// recognize exactly this shape so every copy of one mirror can be found
-// again; a test pins the two together.
-const quarantineTimeLayout = "20060102T150405Z"
 
 // quarantineMirror moves a corrupt mirror out of the active mirror tree while
 // preserving its relative directory structure. The quarantined mirror is kept
@@ -62,7 +55,7 @@ func (e *Engine) quarantineMirror(target string) (string, error) {
 	// a timestamp to the new quarantine path.
 	if _, err := os.Stat(quarantinePath); err == nil {
 
-		quarantinePath += "." + time.Now().UTC().Format(quarantineTimeLayout)
+		quarantinePath += "." + clock.FilenameUTCNow()
 	}
 
 	if err := os.Rename(target, quarantinePath); err != nil {

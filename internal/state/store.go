@@ -9,6 +9,7 @@ import (
 	"os"
 	"time"
 
+	"github.com/flarexes/gitback/internal/clock"
 	"github.com/flarexes/gitback/internal/filesystem"
 )
 
@@ -21,20 +22,11 @@ func SaveMirrors(
 ) error {
 
 	data := MirrorState{
-		GeneratedAt: time.Now().
-			UTC().
-			Format(time.RFC3339),
-
-		SyncStartedAt: syncStartedAt.
-			UTC().
-			Format(time.RFC3339),
-
-		SyncCompletedAt: syncCompletedAt.
-			UTC().
-			Format(time.RFC3339),
-
-		Repositories: repositories,
-		Gists:        gists,
+		GeneratedAt:     clock.LocalRFC3339Now(),
+		SyncStartedAt:   clock.LocalRFC3339(syncStartedAt),
+		SyncCompletedAt: clock.LocalRFC3339(syncCompletedAt),
+		Repositories:    repositories,
+		Gists:           gists,
 	}
 
 	return filesystem.AtomicWriteFile(

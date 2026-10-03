@@ -15,6 +15,8 @@ import (
 	"strings"
 	"sync"
 	"time"
+
+	"github.com/flarexes/gitback/internal/clock"
 )
 
 type Logger struct {
@@ -298,7 +300,7 @@ func (l *Logger) Emit(def EventDef, opts ...Option) {
 
 	entry := Entry{
 		SchemaVersion: schemaVersion,
-		Timestamp:     time.Now().Format(time.RFC3339),
+		Timestamp:     clock.LocalRFC3339Now(),
 		Level:         def.Level,
 		RunID:         l.runID,
 		Host:          l.host,

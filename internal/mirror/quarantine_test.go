@@ -10,7 +10,8 @@ import (
 	"path/filepath"
 	"reflect"
 	"testing"
-	"time"
+
+	"github.com/flarexes/gitback/internal/clock"
 )
 
 // quarantineNames lists the entries in one owner's quarantine directory.
@@ -98,9 +99,9 @@ func TestCleanupQuarantine_removesOnlyCopiesOfThisMirror(t *testing.T) {
 	q := filepath.Join(cfg.QuarantineDir(), "repositories")
 
 	for _, name := range []string{
-		"owner/x.git",                  // plain copy
-		"owner/x.git.20260920T163629Z", // copies from repeated quarantines
-		"owner/x.git.20260921T010101Z",
+		"owner/x.git",                      // plain copy
+		"owner/x.git.2026-09-20T16-36-29Z", // copies from repeated quarantines
+		"owner/x.git.2026-09-21T01-01-01Z",
 		"owner/y.git",     // a different mirror, same owner
 		"owner/x.git.bak", // not a quarantine copy: the suffix isn't a timestamp
 		"other/x.git",     // same name, different owner
@@ -127,7 +128,7 @@ func TestCleanupQuarantine_removesOnlyCopiesOfThisMirror(t *testing.T) {
 // cleaned up, so pin them together.
 func TestCanonicalMirrorName_recognizesWhatQuarantineMirrorProduces(t *testing.T) {
 
-	suffixed := "x.git." + time.Now().UTC().Format(quarantineTimeLayout)
+	suffixed := "x.git." + clock.FilenameUTCNow()
 
 	if got := canonicalMirrorName(suffixed); got != "x.git" {
 		t.Errorf("canonicalMirrorName(%q) = %q, want %q", suffixed, got, "x.git")
@@ -152,7 +153,7 @@ func TestSyncMirror_healthyMirror_clearsStaleQuarantine(t *testing.T) {
 	// Earlier interrupted runs left quarantined copies of it.
 	q := filepath.Join(e.cfg.QuarantineDir(), "repositories", "owner")
 	mkdirAll(t, filepath.Join(q, "x.git"))
-	mkdirAll(t, filepath.Join(q, "x.git.20260920T163629Z"))
+	mkdirAll(t, filepath.Join(q, "x.git."+clock.FilenameUTCNow()))
 
 	// The second sync takes the update path.
 	if err := e.syncMirror(ctx, remote, target); err != nil {
@@ -224,10 +225,12 @@ func TestCountQuarantined_countsEachMirrorOnce(t *testing.T) {
 	cfg, _ := orphanFixture(t, nil)
 	q := cfg.QuarantineDir()
 
+	ts := clock.FilenameUTCNow()
+
 	mkdirAll(t, filepath.Join(q, "repositories", "owner", "a.git"))
-	mkdirAll(t, filepath.Join(q, "repositories", "owner", "a.git.20260920T163629Z")) // second copy of a
-	mkdirAll(t, filepath.Join(q, "repositories", "owner", "b.git.20260920T163629Z")) // only a timestamped copy
-	mkdirAll(t, filepath.Join(q, "gists", "g1.git.20260920T163629Z"))
+	mkdirAll(t, filepath.Join(q, "repositories", "owner", "a.git."+ts)) // second copy of a
+	mkdirAll(t, filepath.Join(q, "repositories", "owner", "b.git."+ts)) // only a timestamped copy
+	mkdirAll(t, filepath.Join(q, "gists", "g1.git."+ts))
 
 	repositories, gists, err := CountQuarantined(cfg)
 	if err != nil {

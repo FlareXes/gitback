@@ -8,8 +8,8 @@ import (
 	"sort"
 	"strings"
 	"syscall"
-	"time"
 
+	"github.com/flarexes/gitback/internal/clock"
 	"github.com/flarexes/gitback/internal/config"
 	"github.com/flarexes/gitback/internal/logging"
 	"github.com/flarexes/gitback/internal/mirror"
@@ -20,7 +20,7 @@ import (
 func Generate(cfg *config.Config, layout runtime.Layout) (*HealthReport, error) {
 
 	report := &HealthReport{
-		GeneratedAt: time.Now().UTC().Format(time.RFC3339),
+		GeneratedAt: clock.LocalRFC3339Now(),
 
 		// Optimistic default. updateStatus function downgrades this based on
 		// what the populate* functions below find.

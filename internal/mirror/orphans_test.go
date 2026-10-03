@@ -85,10 +85,10 @@ func TestFindOrphans_mirrorAtSyncPath_isNotOrphan(t *testing.T) {
 // still be reported under its canonical name.
 func TestFindOrphans_quarantineTimestampSuffix_matchesCanonicalName(t *testing.T) {
 
-	cfg, layout := orphanFixture(t, []string{"https://github.com/owner/listed.git"})
+	cfg, layout := orphanFixture(t, []string{"https://github.com/owner/still-exists.git"})
 	q := filepath.Join(cfg.QuarantineDir(), "repositories", "owner")
-	mkdirAll(t, filepath.Join(q, "listed.git.20260920T163629Z"))
-	mkdirAll(t, filepath.Join(q, "gone.git.20260920T163629Z"))
+	mkdirAll(t, filepath.Join(q, "still-exists.git.2026-09-20T16-36-29Z"))
+	mkdirAll(t, filepath.Join(q, "gone.git.2026-09-20T16-36-29Z"))
 
 	got, err := FindOrphans(cfg, layout)
 	if err != nil {
