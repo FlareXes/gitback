@@ -94,44 +94,40 @@ func (e *Engine) logSyncSummary(
 	repositories []state.Asset,
 	gists []state.Asset,
 ) {
-	var repositoryHealthy int
-	var repositoryFailed int
+	repoHealthy, repoInterrupted, repoFailed := summarizeAssets(repositories)
+	gistHealthy, gistInterrupted, gistFailed := summarizeAssets(gists)
 
-	for _, repo := range repositories {
-
-		if repo.LastSuccess {
-			repositoryHealthy++
-		} else {
-			repositoryFailed++
-		}
-	}
-
-	var gistHealthy int
-	var gistFailed int
-
-	for _, gist := range gists {
-
-		if gist.LastSuccess {
-			gistHealthy++
-		} else {
-			gistFailed++
-		}
-	}
-
-	// Run-level summary event.
 	e.logger.Emit(
 		logging.Events.Sync.Summary,
 		logging.WithDuration(time.Since(syncStartedAt)),
 		logging.WithDetails(map[string]any{
-			"repositories_total":   len(repositories),
-			"repositories_healthy": repositoryHealthy,
-			"repositories_failed":  repositoryFailed,
+			"repositories_total":       len(repositories),
+			"repositories_healthy":     repoHealthy,
+			"repositories_interrupted": repoInterrupted,
+			"repositories_failed":      repoFailed,
 
-			"gists_enabled": e.cfg.GitHub.BackupGists,
-			"gists_total":   len(gists),
-			"gists_healthy": gistHealthy,
-			"gists_failed":  gistFailed,
+			"gists_enabled":     e.cfg.GitHub.BackupGists,
+			"gists_total":       len(gists),
+			"gists_healthy":     gistHealthy,
+			"gists_interrupted": gistInterrupted,
+			"gists_failed":      gistFailed,
 		}),
 	)
+}
 
+// summarizeAssets buckets assets into healthy/interrupted/failed using
+// the same rule health.populateAssets already uses (Cause ==
+// CauseCancelled, not just !LastSuccess).
+func summarizeAssets(assets []state.Asset) (healthy, interrupted, failed int) {
+	for _, a := range assets {
+		switch {
+		case a.LastSuccess:
+			healthy++
+		case a.Cause == logging.CauseCancelled:
+			interrupted++
+		default:
+			failed++
+		}
+	}
+	return
 }

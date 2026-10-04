@@ -36,7 +36,7 @@ func (c *Client) discoverGists(ctx context.Context) (DiscoverResult, error) {
 
 		if err != nil {
 			return DiscoverResult{}, fmt.Errorf("list gists page=%d: %w",
-				opt.Page,
+				page,
 				err,
 			)
 		}

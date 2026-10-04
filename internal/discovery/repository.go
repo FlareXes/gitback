@@ -36,7 +36,7 @@ func (c *Client) discoverRepositories(ctx context.Context) (DiscoverResult, erro
 		if err != nil {
 
 			return DiscoverResult{}, fmt.Errorf("list repositories page=%d: %w",
-				opt.Page,
+				page,
 				err,
 			)
 		}

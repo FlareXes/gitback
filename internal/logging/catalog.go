@@ -30,16 +30,15 @@ type ConfigEvents struct {
 }
 
 type GitHubEvents struct {
-	DiscoveryStarted   EventDef
-	DiscoveryCompleted EventDef
-	DiscoveryFailed    EventDef
+	DiscoveryStarted     EventDef
+	DiscoveryCompleted   EventDef
+	DiscoveryFailed      EventDef
+	DiscoveryInterrupted EventDef
 
 	DiscoverySummary EventDef
 	PageFetched      EventDef
 	InventoryLoaded  EventDef
 	RateLimit        EventDef
-
-	DiscoveryInterrupted EventDef
 }
 
 type InventoryEvents struct {
@@ -95,6 +94,7 @@ type SnapshotEvents struct {
 	Started   EventDef
 	Completed EventDef
 	Failed    EventDef
+	Interrupted EventDef
 
 	VerificationStarted EventDef
 	VerificationPassed  EventDef
@@ -117,8 +117,6 @@ type SnapshotEvents struct {
 	RetentionFailed    EventDef
 
 	CollisionDetected EventDef
-
-	Interrupted EventDef
 }
 
 type LockEvents struct {
@@ -184,6 +182,13 @@ var Events = EventCatalog{
 			Level:       Error,
 			Message:     "GitHub discovery failed",
 			Remediation: "Run `gitback doctor` to check network connectivity and token validity, then retry.",
+		},
+		DiscoveryInterrupted: EventDef{
+			Component:   ComponentGitHub,
+			Code:        "discovery_interrupted",
+			Level:       Warn,
+			Message:     "GitHub discovery was interrupted before completion",
+			Remediation: "Re-run `gitback discover` to finish refreshing the inventory.",
 		},
 		DiscoverySummary: EventDef{
 			Component: ComponentGitHub,
@@ -458,6 +463,13 @@ var Events = EventCatalog{
 			Level:       Error,
 			Message:     "Snapshot creation failed",
 			Remediation: "Ensure `tar` and `zstd` are installed and the snapshot output directory is writable, then retry.",
+		},
+		Interrupted: EventDef{
+			Component:   ComponentSnapshot,
+			Code:        "interrupted",
+			Level:       Warn,
+			Message:     "Snapshot creation was interrupted before completion",
+			Remediation: "Re-run `gitback snapshot` to retry.",
 		},
 
 		VerificationStarted: EventDef{

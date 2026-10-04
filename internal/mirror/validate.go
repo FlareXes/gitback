@@ -43,11 +43,14 @@ func (e *Engine) validateMirror(ctx context.Context, target string) error {
 			return err
 		}
 
-		fsckErr := fmt.Errorf(
-			"%w: %s",
-			ErrMirrorCorrupt,
-			strings.TrimSpace(string(output)),
-		)
+		detail := strings.TrimSpace(string(output))
+		if detail == "" {
+			// fsck can exit non-zero with no output at all — fall back
+			// to the exit error itself
+			detail = err.Error()
+		}
+
+		fsckErr := fmt.Errorf("%w: %s", ErrMirrorCorrupt, detail)
 
 		e.logger.Emit(
 			logging.Events.Mirror.FsckFailed,
