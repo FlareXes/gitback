@@ -6,6 +6,7 @@ import (
 	"context"
 	"fmt"
 
+	"github.com/flarexes/gitback/internal/ghauth"
 	"github.com/flarexes/gitback/internal/logging"
 	"github.com/google/go-github/v88/github"
 )
@@ -28,17 +29,18 @@ func (c *Client) discoverGists(ctx context.Context) (DiscoverResult, error) {
 
 		fmt.Printf("Fetching gists         (page %d)\n", page)
 
-		gists, resp, err := c.api.Gists.List(
-			ctx,
-			"",
-			opt,
-		)
+		gists, resp, err := c.api.Gists.List(ctx, "", opt)
 
 		if err != nil {
-			return DiscoverResult{}, fmt.Errorf("list gists page=%d: %w",
-				page,
-				err,
-			)
+
+			// Give a real explanation when the failure is GitHub
+			// rejecting the token, rather than letting go-github's raw
+			// error text (e.g. "Bad credentials").
+			if msg, ok := ghauth.Diagnose(err, resp); ok {
+				return DiscoverResult{}, fmt.Errorf("list gists page=%d: %s", page, msg)
+			}
+
+			return DiscoverResult{}, fmt.Errorf("list gists page=%d: %w", page, err)
 		}
 
 		lastResponse = resp

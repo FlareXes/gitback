@@ -43,3 +43,12 @@ func FilenameUTC(t time.Time) string {
 func FilenameUTCNow() string {
 	return FilenameUTC(time.Now())
 }
+
+// HumanDateLayout formats a date the way gitback shows it to a person —
+// e.g. "Mon, Oct 12 2026". Used for every expiry-related date shown to
+// the user.
+const HumanDateLayout = "Mon, Jan 2 2006"
+
+func HumanDate(t time.Time) string {
+	return t.Format(HumanDateLayout)
+}

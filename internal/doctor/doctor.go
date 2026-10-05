@@ -10,8 +10,11 @@ import (
 	"os/exec"
 	"runtime"
 	"strings"
+	"time"
 
+	"github.com/flarexes/gitback/internal/clock"
 	"github.com/flarexes/gitback/internal/config"
+	"github.com/flarexes/gitback/internal/ghauth"
 	"github.com/flarexes/gitback/internal/logging"
 	rt "github.com/flarexes/gitback/internal/runtime"
 	"github.com/google/go-github/v88/github"
@@ -134,9 +137,7 @@ func Generate(layout rt.Layout, logger *logging.Logger) (*Report, error) {
 
 	token, _ := config.ReadToken(layout, logger)
 
-	report.AddCheck(
-		checkGitHub(token),
-	)
+	report.AddChecks(checkGitHubToken(token))
 
 	return report, nil
 }
@@ -294,42 +295,81 @@ func checkDirectory(name, path string) Check {
 	}
 }
 
-func checkGitHub(token string) Check {
+func checkGitHubToken(token string) []Check {
 
 	if token == "" {
-
-		return Check{
+		return []Check{{
 			Name:           "github authentication",
 			Success:        false,
 			Recommendation: `Run "gitback init"`,
 			Message:        "GitHub token is not set.",
-		}
+		}}
 	}
 
-	client, err := github.NewClient(
-		github.WithAuthToken(
-			token,
-		),
-	)
-
+	client, err := github.NewClient(github.WithAuthToken(token))
 	if err != nil {
-
-		return Check{
+		return []Check{{
 			Name:           "github authentication",
 			Success:        false,
 			Message:        err.Error(),
 			Recommendation: "Verify the GitHub token and its permissions.",
+		}}
+	}
+
+	_, resp, authErr := client.Users.Get(context.Background(), "")
+
+	authCheck := Check{
+		Name:           "github authentication",
+		Success:        authErr == nil,
+		Recommendation: "Verify the GitHub token and its permissions.",
+	}
+
+	if authErr != nil {
+
+		authCheck.Message = authErr.Error()
+
+		if msg, ok := ghauth.Diagnose(authErr, resp); ok {
+			authCheck.Message = msg
 		}
 	}
 
-	_, _, err = client.Users.Get(
-		context.Background(),
-		"",
-	)
+	checks := []Check{authCheck}
 
-	return Check{
-		Name:           "github authentication",
-		Success:        err == nil,
-		Recommendation: "Verify the GitHub token and its permissions.",
+	if status, expiresAt := ghauth.CheckExpiration(resp); status != ghauth.NoExpiryInfo {
+		checks = append(checks, expiryCheck(status, expiresAt))
+	}
+
+	return checks
+}
+
+func expiryCheck(status ghauth.ExpiryStatus, expiresAt time.Time) Check {
+
+	const name = "github token expiration"
+
+	switch status {
+
+	case ghauth.Expired:
+		return Check{
+			Name:           name,
+			Success:        false,
+			Message:        fmt.Sprintf("token expired on %s", clock.HumanDate(expiresAt)),
+			Recommendation: "Generate a new token and run `gitback init --force` (or `gitback init --use-env-token`).",
+		}
+
+	case ghauth.ExpiringSoon:
+		days := int(time.Until(expiresAt).Hours() / 24)
+		return Check{
+			Name:           name,
+			Success:        false,
+			Message:        fmt.Sprintf("token expires on %s (in %d day(s))", clock.HumanDate(expiresAt), days),
+			Recommendation: "Generate a replacement token before this one expires, then run `gitback init --force`.",
+		}
+
+	default: // ghauth.ExpiryOK
+		return Check{
+			Name:    name,
+			Success: true,
+			Message: fmt.Sprintf("expires on %s", clock.HumanDate(expiresAt)),
+		}
 	}
 }

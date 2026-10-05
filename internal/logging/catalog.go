@@ -38,7 +38,9 @@ type GitHubEvents struct {
 	DiscoverySummary EventDef
 	PageFetched      EventDef
 	InventoryLoaded  EventDef
-	RateLimit        EventDef
+
+	RateLimit         EventDef
+	TokenExpiringSoon EventDef
 }
 
 type InventoryEvents struct {
@@ -91,9 +93,9 @@ type SyncEvents struct {
 }
 
 type SnapshotEvents struct {
-	Started   EventDef
-	Completed EventDef
-	Failed    EventDef
+	Started     EventDef
+	Completed   EventDef
+	Failed      EventDef
 	Interrupted EventDef
 
 	VerificationStarted EventDef
@@ -213,6 +215,13 @@ var Events = EventCatalog{
 			Code:      "rate_limit",
 			Level:     Info,
 			Message:   "GitHub API rate limit status",
+		},
+		TokenExpiringSoon: EventDef{
+			Component:   ComponentGitHub,
+			Code:        "token_expiring_soon",
+			Level:       Warn,
+			Message:     "GitHub token is approaching its expiration date",
+			Remediation: "Generate a replacement token before it expires, then run `gitback init --force` (or `gitback init --use-env-token`).",
 		},
 	},
 

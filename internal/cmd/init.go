@@ -11,6 +11,7 @@ import (
 	"time"
 
 	"github.com/flarexes/gitback/internal/config"
+	"github.com/flarexes/gitback/internal/ghauth"
 	"github.com/flarexes/gitback/internal/runtime"
 	"github.com/google/go-github/v88/github"
 	"github.com/spf13/cobra"
@@ -103,13 +104,15 @@ init won't prompt, and nothing is written to the token file.`,
 			return err
 		}
 
-		user, _, err := client.Users.Get(ctx, "")
+		user, resp, err := client.Users.Get(ctx, "")
 
 		if err != nil {
-			return fmt.Errorf(
-				"github authentication failed: %w",
-				err,
-			)
+
+			if msg, ok := ghauth.Diagnose(err, resp); ok {
+				return fmt.Errorf("github authentication failed: %s", msg)
+			}
+
+			return fmt.Errorf("github authentication failed: %w", err)
 		}
 
 		configPath := layout.ConfigFile
